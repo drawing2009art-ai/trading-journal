@@ -1,0 +1,2519 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0e1116">
+<title>Forex Journal — Prototype</title>
+<style>
+/* ============================================================
+   THEME TOKENS
+   ============================================================ */
+:root{
+  --bg:#0e1116; --surface:#161b22; --surface2:#1c2430; --border:#2a3441;
+  --text:#e6edf3; --muted:#8b949e; --accent:#2f81f7;
+  --green:#3fb950; --red:#f85149; --gold:#d29922; --be:#8b949e;
+  --radius:14px;
+}
+[data-theme="light"]{
+  --bg:#f6f8fa; --surface:#ffffff; --surface2:#f0f3f6; --border:#d0d7de;
+  --text:#0d1117; --muted:#57606a; --accent:#0969da;
+  --green:#1a7f37; --red:#cf222e; --gold:#9a6700; --be:#57606a;
+}
+
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0; padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg); color:var(--text); font-size:15px;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom));
+  min-height:100vh; overscroll-behavior-y:contain;
+}
+button{font-family:inherit}
+h1,h2,h3,h4{margin:0 0 8px; font-weight:600}
+h3{font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.pos{color:var(--green)} .neg{color:var(--red)} .neu{color:var(--be)}
+
+/* ============================================================ HEADER */
+header#appHeader{
+  position:sticky; top:0; z-index:20;
+  background:var(--bg); border-bottom:1px solid var(--border);
+  padding:12px 16px; padding-top:calc(12px + env(safe-area-inset-top));
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+}
+header h1{font-size:17px; margin:0; font-weight:700}
+header .sub{font-size:12px; color:var(--muted); margin-top:2px}
+
+/* ============================================================ VIEW */
+main#view{padding:12px 14px 24px; max-width:760px; margin:0 auto; min-height:60vh}
+
+/* ============================================================ BOTTOM NAV */
+nav#bottomNav{
+  position:fixed; bottom:0; left:0; right:0; z-index:30;
+  background:var(--surface); border-top:1px solid var(--border);
+  display:grid; grid-template-columns:repeat(5,1fr);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+nav#bottomNav button{
+  background:none; border:0; color:var(--muted);
+  padding:8px 4px 10px; font-size:10px; display:flex; flex-direction:column;
+  align-items:center; gap:3px; cursor:pointer; font-family:inherit;
+}
+nav#bottomNav button.active{color:var(--accent)}
+nav#bottomNav svg{width:22px; height:22px}
+
+/* ============================================================ FAB */
+#fab{
+  position:fixed; right:18px; bottom:calc(86px + env(safe-area-inset-bottom));
+  z-index:25; width:56px; height:56px; border-radius:50%; border:0;
+  background:var(--accent); color:#fff; font-size:28px; line-height:1;
+  box-shadow:0 6px 18px rgba(0,0,0,.4); cursor:pointer;
+}
+
+/* ============================================================ CARDS & LAYOUT */
+.card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+      padding:12px; margin-bottom:10px;}
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+.row{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.spacer{flex:1}
+
+/* ============================================================ BUTTONS */
+.btn{
+  background:var(--surface2); border:1px solid var(--border); color:var(--text);
+  border-radius:10px; padding:10px 14px; font-size:14px; cursor:pointer;
+}
+.btn.primary{background:var(--accent); border-color:var(--accent); color:#fff}
+.btn.danger{background:var(--red); border-color:var(--red); color:#fff}
+.btn.tiny{padding:6px 10px; font-size:12px}
+.btn.full{width:100%}
+.icon-btn{background:none; border:0; color:var(--muted); font-size:20px; padding:4px 8px; cursor:pointer}
+
+/* ============================================================ INPUTS */
+input,select,textarea{
+  width:100%; background:var(--surface2); border:1px solid var(--border);
+  color:var(--text); border-radius:10px; padding:10px 12px; font-size:15px;
+  font-family:inherit; outline:none;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+label.field{display:block; margin-bottom:10px}
+label.field > span{display:block; font-size:12px; color:var(--muted); margin-bottom:4px}
+details > summary{cursor:pointer; color:var(--muted); font-size:13px; margin:8px 0; font-weight:600;}
+
+/* ============================================================ STAT CARDS */
+.stats{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px}
+.stat{background:var(--surface2); border-radius:12px; padding:10px 12px}
+.stat .label{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em}
+.stat .value{font-size:18px; font-weight:700; margin-top:2px}
+
+/* ============================================================ PERIOD SWITCH */
+.period-switch{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.period-switch button.nav{
+  background:var(--surface2); border:1px solid var(--border); color:var(--text);
+  width:36px; height:36px; border-radius:10px; font-size:20px; cursor:pointer;
+}
+.period-switch button.nav:disabled{opacity:.35}
+.period-label{text-align:center; font-weight:600}
+.period-tabs{display:flex; gap:4px; justify-content:center; margin-top:6px}
+.period-tabs button{
+  background:none; border:1px solid var(--border); color:var(--muted);
+  border-radius:8px; padding:4px 10px; font-size:11px; cursor:pointer;
+  font-weight:600; letter-spacing:.04em;
+}
+.period-tabs button.active{background:var(--accent); border-color:var(--accent); color:#fff}
+
+/* ============================================================ WEEK CARDS */
+.week{border:1px solid var(--border); border-radius:var(--radius); margin-bottom:10px;
+      overflow:hidden; background:var(--surface);}
+.week-header{padding:12px; cursor:pointer}
+.week-header .row1{display:flex; justify-content:space-between; align-items:center; gap:8px}
+.week-title{font-weight:600; font-size:14px}
+.week-pips{font-weight:700; font-size:15px; text-align:right}
+.week-sub{font-size:12px; color:var(--muted); margin-top:2px}
+.week-body{border-top:1px solid var(--border); padding:0 12px 8px; display:none}
+.week.open .week-body{display:block}
+
+.day-group{padding-top:6px}
+.day-header{font-size:12px; color:var(--muted); padding:8px 0 4px; font-weight:600;
+            text-transform:uppercase; letter-spacing:.04em;}
+.trade-row{display:flex; align-items:center; gap:10px; padding:10px 0;
+           border-bottom:1px solid var(--border); cursor:pointer}
+.trade-row:last-child{border-bottom:0}
+.trade-thumb{width:40px; height:40px; border-radius:8px; object-fit:cover;
+             background:var(--surface2); flex-shrink:0;}
+.trade-thumb.placeholder{display:flex; align-items:center; justify-content:center;
+                         color:var(--muted); font-size:16px;}
+.trade-main{flex:1; min-width:0}
+.trade-main .line1{display:flex; gap:6px; align-items:center; font-weight:600}
+.trade-main .line2{font-size:12px; color:var(--muted); margin-top:2px; white-space:nowrap;
+                   overflow:hidden; text-overflow:ellipsis;}
+.trade-pips{font-weight:700; text-align:right; font-size:15px; line-height:1.15}
+.trade-result{font-size:10px; font-weight:600; letter-spacing:.05em; color:var(--muted);
+              text-transform:uppercase; margin-top:2px;}
+
+/* BADGES */
+.badge{font-size:10px; padding:2px 6px; border-radius:6px; font-weight:700; letter-spacing:.05em}
+.badge.buy{background:rgba(63,185,80,.18); color:var(--green)}
+.badge.sell{background:rgba(248,81,73,.18); color:var(--red)}
+.badge.be{background:rgba(139,148,158,.18); color:var(--be)}
+.badge.open{background:rgba(47,129,247,.18); color:var(--accent)}
+
+/* SEARCH */
+.search-bar{display:flex; gap:8px; margin-bottom:10px}
+.search-bar input{flex:1}
+.search-bar button{background:var(--surface2); border:1px solid var(--border);
+                   color:var(--text); border-radius:10px; padding:0 14px; cursor:pointer;}
+
+/* ============================================================ TABLE */
+.tbl{width:100%; border-collapse:collapse; font-size:13px}
+.tbl th{text-align:left; font-size:11px; color:var(--muted); text-transform:uppercase;
+        letter-spacing:.03em; padding:6px 4px; border-bottom:1px solid var(--border); font-weight:600}
+.tbl td{padding:8px 4px; border-bottom:1px solid var(--border)}
+.tbl tr:last-child td{border-bottom:0}
+.tbl .num{text-align:right; font-variant-numeric:tabular-nums}
+
+/* ============================================================ MONTH-BY-WEEK */
+.month-grid{display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:20px;}
+@media(min-width:640px){ .month-grid{grid-template-columns:1fr 1fr;} }
+.month-card{background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden;}
+.month-header{display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid var(--border); background:rgba(255,255,255,0.02);}
+.month-title{font-weight:700; font-size:14px; text-transform:uppercase; letter-spacing:.04em; color:var(--text);}
+.month-total-badge{background:rgba(63,185,80,.15); color:var(--green); padding:2px 8px; border-radius:6px; font-weight:700; font-size:12px;}
+.month-total-badge.neg{background:rgba(248,81,73,.15); color:var(--red);}
+.month-total-badge.neu{background:rgba(139,148,158,.15); color:var(--be);}
+.month-card .tbl th{padding:8px 12px; border-bottom:1px solid var(--border);}
+.month-card .tbl td{padding:8px 12px; border-bottom:1px solid var(--border);}
+.month-footer{padding:8px 12px; font-size:11px; color:var(--muted); border-top:1px solid var(--border); display:flex; gap:4px;}
+
+/* ============================================================ CANVAS CHART */
+#equityChart{width:100%; height:180px; display:block; border-radius:10px; background:var(--surface2);}
+
+/* ============================================================ CALENDAR */
+.cal{display:grid; grid-template-columns:repeat(7,1fr) 44px; gap:3px}
+.cal .head{font-size:10px; color:var(--muted); text-align:center; padding:4px 0;
+           text-transform:uppercase; letter-spacing:.03em; font-weight:600;}
+.cal-day{
+  aspect-ratio:1; border:1px solid var(--border); border-radius:8px;
+  background:var(--surface2); padding:2px; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  font-size:11px; color:var(--text); position:relative;
+}
+.cal-day.empty{background:transparent; border-color:transparent; cursor:default}
+.cal-day.pos{background:rgba(63,185,80,.18); border-color:rgba(63,185,80,.4)}
+.cal-day.neg{background:rgba(248,81,73,.18); border-color:rgba(248,81,73,.4)}
+.cal-day .cal-num{font-weight:600; font-size:12px}
+.cal-day .cal-val{font-size:10px; font-weight:600; margin-top:1px}
+.cal-week-total{
+  display:flex; align-items:center; justify-content:center; font-size:11px;
+  font-weight:700; border-radius:8px; background:var(--surface);
+  border:1px solid var(--border);
+}
+
+/* ============================================================ MODALS */
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:50;
+  display:flex; align-items:flex-end; justify-content:center;
+}
+.modal{
+  background:var(--bg); width:100%; max-width:760px; max-height:92vh;
+  border-radius:16px 16px 0 0; display:flex; flex-direction:column; overflow:hidden;
+  border:1px solid var(--border); border-bottom:0;
+}
+.modal-header{display:flex; justify-content:space-between; align-items:center;
+              padding:14px 16px; border-bottom:1px solid var(--border);}
+.modal-header h3{margin:0; color:var(--text); text-transform:none; letter-spacing:0; font-size:16px}
+.modal-body{overflow-y:auto; padding:16px; flex:1; -webkit-overflow-scrolling:touch}
+.modal-footer{padding:12px 16px; border-top:1px solid var(--border);
+              display:flex; gap:8px; padding-bottom:calc(12px + env(safe-area-inset-bottom));}
+@media(min-width:640px){
+  .modal-backdrop{align-items:center}
+  .modal{border-radius:16px; border:1px solid var(--border); max-height:88vh}
+}
+
+/* SEGMENTED CONTROL */
+.seg{display:flex; gap:6px}
+.seg button{flex:1; padding:10px; border-radius:10px; border:1px solid var(--border);
+            background:var(--surface2); color:var(--muted); font-weight:700; cursor:pointer; font-size:14px;}
+.seg button.active.buy{background:rgba(63,185,80,.2); border-color:var(--green); color:var(--green)}
+.seg button.active.sell{background:rgba(248,81,73,.2); border-color:var(--red); color:var(--red)}
+
+/* PREVIEW BOX */
+.preview{background:var(--surface2); border:1px solid var(--border); border-radius:12px;
+         padding:10px 12px; margin-top:8px; font-size:13px;}
+.preview-row{display:flex; justify-content:space-between; padding:3px 0}
+.preview-row b{font-variant-numeric:tabular-nums}
+
+/* SCREENSHOTS */
+.shot-preview{margin-top:6px; border-radius:8px; overflow:hidden; background:var(--surface2);
+              min-height:60px; display:flex; align-items:center; justify-content:center;}
+.shot-preview img{width:100%; display:block}
+.shot-preview .ph{font-size:11px; color:var(--muted); padding:20px}
+
+/* VIEWER */
+#viewer{position:fixed; inset:0; background:rgba(0,0,0,.96); z-index:100;
+        display:none; align-items:center; justify-content:center; overflow:hidden;
+        touch-action:none; user-select:none;}
+#viewer.show{display:flex}
+#viewer img{max-width:100%; max-height:100%; transform-origin:center; touch-action:none;}
+#viewer .close{position:absolute; top:16px; right:16px; background:rgba(255,255,255,.1);
+               border:0; color:#fff; width:40px; height:40px; border-radius:50%;
+               font-size:22px; cursor:pointer; z-index:2;}
+#viewer .hint{position:absolute; bottom:16px; left:0; right:0; text-align:center;
+              color:rgba(255,255,255,.6); font-size:12px;}
+
+/* TOAST */
+.toast{position:fixed; bottom:100px; left:50%; transform:translate(-50%, 30px);
+       background:var(--surface); border:1px solid var(--border); border-radius:12px;
+       padding:10px 16px; box-shadow:0 6px 24px rgba(0,0,0,.5); z-index:200;
+       display:flex; gap:12px; align-items:center; font-size:14px; opacity:0;
+       transition:opacity .25s, transform .25s; max-width:calc(100% - 32px);}
+.toast.show{opacity:1; transform:translate(-50%, 0);}
+.toast button{background:none; border:0; color:var(--accent); font-weight:700; cursor:pointer;}
+
+/* EMPTY */
+.empty{text-align:center; color:var(--muted); padding:32px 16px;}
+.empty .big{font-size:36px; margin-bottom:8px}
+
+/* FIXED DIRECTION BADGE */
+.dir-badge{display:inline-block; padding:6px 12px; border-radius:8px; font-weight:700; font-size:14px; margin-bottom:10px;}
+.dir-badge.buy{background:rgba(63,185,80,.15); color:var(--green); border:1px solid rgba(63,185,80,.3);}
+.dir-badge.sell{background:rgba(248,81,73,.15); color:var(--red); border:1px solid rgba(248,81,73,.3);}
+.dir-badge.none{background:rgba(139,148,158,.15); color:var(--be); border:1px solid rgba(139,148,158,.3);}
+</style>
+</head>
+<body>
+
+<header id="appHeader">
+  <div>
+    <h1>Forex Journal</h1>
+    <div class="sub" id="headerSub"></div>
+  </div>
+  <div id="headerRight"></div>
+</header>
+
+<main id="view"></main>
+
+<nav id="bottomNav">
+  <button data-tab="dashboard" aria-label="Dashboard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    <span>Dashboard</span>
+  </button>
+  <button data-tab="trades" aria-label="Trades">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+    <span>Trades</span>
+  </button>
+  <button data-tab="calendar" aria-label="Calendar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>Calendar</span>
+  </button>
+  <button data-tab="analytics" aria-label="Analytics">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    <span>Analytics</span>
+  </button>
+  <button data-tab="settings" aria-label="Settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span>Settings</span>
+  </button>
+</nav>
+
+<button id="fab" aria-label="Add trade">+</button>
+
+<script>
+/* ============================================================
+   FOREX JOURNAL — PROTOTYPE (single file)
+   ============================================================ */
+
+const STORE_KEY = 'fxjournal_proto_v7';
+const OLD_KEY = 'fxjournal_proto_v6';
+const DEFAULT_RISK_PCT = 1;
+let state = null;
+let db = null;
+
+/* ------------------------------------------------------------
+   DATABASE & MIGRATION
+   ------------------------------------------------------------ */
+function initDB() {
+  return new Promise((resolve) => {
+    if (!window.indexedDB) {
+      showToast("Images can't be saved in this browser");
+      return resolve();
+    }
+    const req = indexedDB.open('fxjournal', 1);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('images')) {
+        db.createObjectStore('images');
+      }
+    };
+    req.onsuccess = e => {
+      db = e.target.result;
+      resolve();
+    };
+    req.onerror = e => {
+      showToast("Images can't be saved in this browser");
+      resolve();
+    };
+  });
+}
+
+function saveImage(id, base64) {
+  if (!db) return Promise.resolve();
+  return new Promise((resolve) => {
+    const tx = db.transaction('images', 'readwrite');
+    tx.objectStore('images').put(base64, id);
+    tx.oncomplete = resolve;
+    tx.onerror = resolve;
+  });
+}
+
+function getImage(id) {
+  if (!db) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const tx = db.transaction('images', 'readonly');
+    const req = tx.objectStore('images').get(id);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => resolve(null);
+  });
+}
+
+function deleteImage(id) {
+  if (!db) return Promise.resolve();
+  return new Promise((resolve) => {
+    const tx = db.transaction('images', 'readwrite');
+    tx.objectStore('images').delete(id);
+    tx.oncomplete = resolve;
+    tx.onerror = resolve;
+  });
+}
+
+function clearImages() {
+  if (!db) return Promise.resolve();
+  return new Promise((resolve) => {
+    const tx = db.transaction('images', 'readwrite');
+    tx.objectStore('images').clear();
+    tx.oncomplete = resolve;
+    tx.onerror = resolve;
+  });
+}
+
+async function migrateImages() {
+  let changed = false;
+  for (const t of state.trades) {
+    if (t.screenshot && t.screenshot.startsWith('data:image')) {
+      await saveImage(t.id, t.screenshot);
+      t.thumb = await createThumb(t.screenshot);
+      delete t.screenshot;
+      changed = true;
+    }
+  }
+  if (changed) save();
+}
+
+/* ------------------------------------------------------------
+   DEFAULT SETTINGS
+   ------------------------------------------------------------ */
+function defaultSettings(){
+  return {
+    startingBalance: 1000,
+    currency: 'USD',
+    theme: 'dark',
+    pipSizes: {},
+    cashFlows: [],
+  };
+}
+
+function load(){
+  let data = null;
+  const raw = localStorage.getItem(STORE_KEY);
+  if (raw){
+    try {
+      data = JSON.parse(raw);
+    } catch(e) {
+      localStorage.setItem('fxjournal_corrupt_backup', raw);
+      setTimeout(() => showToast('Saved data was damaged and could not be loaded. A copy was kept.'), 100);
+      data = { trades: [], settings: {} };
+    }
+  } else {
+    const oldRaw = localStorage.getItem(OLD_KEY);
+    if (oldRaw) {
+      try {
+        data = JSON.parse(oldRaw);
+        if (data.trades) {
+          data.trades.forEach(t => {
+            delete t.lotSize;
+            delete t.actualMoneyResult;
+          });
+        }
+        localStorage.setItem(STORE_KEY, JSON.stringify(data));
+      } catch(e) {
+        localStorage.setItem('fxjournal_corrupt_backup', oldRaw);
+        setTimeout(() => showToast('Saved data was damaged and could not be loaded. A copy was kept.'), 100);
+        data = { trades: [], settings: {} };
+      }
+    }
+  }
+  
+  if (!data) data = { trades: [], settings: {} };
+  
+  return {
+    trades: Array.isArray(data.trades) ? data.trades : [],
+    settings: Object.assign(defaultSettings(), data.settings || {}),
+  };
+}
+
+function save(){
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({
+      trades: state.trades,
+      settings: state.settings,
+    }));
+  } catch(e){
+    showToast('Storage is full, export a backup now', 'Export', () => exportJSON());
+  }
+}
+
+/* ------------------------------------------------------------
+   HELPERS
+   ------------------------------------------------------------ */
+const $  = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function round1(n){ return Math.round(n*10)/10; }
+function round2(n){ return Math.round(n*100)/100; }
+function sgn(n, d=2){ if(n==null||isNaN(n)) return '—'; const s=Number(n).toFixed(d); return Number(n)>0?'+'+s:s; }
+function cls(n){ if(n==null||isNaN(n)) return 'neu'; return n>0?'pos':n<0?'neg':'neu'; }
+
+function pctTxt(n) {
+  if (n == null || isNaN(n)) return '—';
+  const v = Number(n);
+  let s = v.toFixed(2).replace(/\.?0+$/, '');
+  if (s === '' || s === '-0') s = '0';
+  return (v > 0 ? '+' : '') + s + '%';
+}
+function moneyTxt(n){
+  if (n == null || isNaN(n)) return '';
+  return '$' + Number(n).toFixed(2);
+}
+function rTxt(n){ return n==null||isNaN(n)?'—':sgn(n,2)+'R'; }
+
+/* ------------------------------------------------------------
+   DATES
+   ------------------------------------------------------------ */
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
+function startOfWeek(d){
+  const x = startOfDay(d);
+  const diff = (x.getDay() - 1 + 7) % 7;
+  x.setDate(x.getDate() - diff);
+  return x;
+}
+function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+function startOfYear(d){ return new Date(d.getFullYear(), 0, 1); }
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function addMonths(d,n){ const x=new Date(d); x.setMonth(x.getMonth()+n); return x; }
+function addYears(d,n){ const x=new Date(d); x.setFullYear(x.getFullYear()+n); return x; }
+function dayKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function weekKey(d){ return dayKey(startOfWeek(d)); }
+function monthKey(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function yearKey(d){ return String(d.getFullYear()); }
+function fmtDateShort(d){ return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`; }
+function fmtDateFull(d){ return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`; }
+function fmtTime(d){ return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+function nowLocalInput(){
+  const d = new Date();
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/* ------------------------------------------------------------
+   PIP SIZE / PRICE FORMATTING
+   ------------------------------------------------------------ */
+function defaultPipSize(pair){
+  const p = String(pair||'').toUpperCase();
+  if (p.startsWith('XAU') || p === 'GOLD') return 0.01;
+  if (p.endsWith('JPY')) return 0.01;
+  return 0.0001;
+}
+function pipSizeFor(pair){
+  const key = String(pair||'').toUpperCase();
+  const custom = state.settings.pipSizes[key];
+  if (custom != null && Number(custom) > 0) return Number(custom);
+  return defaultPipSize(pair);
+}
+function fmtPipSize(v){
+  if (v == null) return '—';
+  const n = Number(v);
+  if (isNaN(n)) return '—';
+  if (n >= 0.01) return n.toFixed(2);
+  return n.toFixed(4);
+}
+function decimalsFor(pair){
+  const p = String(pair||'').toUpperCase();
+  if (p.startsWith('XAU')) return 2;
+  if (p.endsWith('JPY')) return 3;
+  return 5;
+}
+function fmtPrice(v, pair){
+  if (v === '' || v == null) return '—';
+  const n = Number(v);
+  if (isNaN(n)) return String(v);
+  return n.toFixed(decimalsFor(pair));
+}
+
+/* ------------------------------------------------------------
+   CALCULATIONS
+   ------------------------------------------------------------ */
+function getPipValue(pair, price) {
+  const p = String(pair||'').toUpperCase();
+  const pipSize = pipSizeFor(p);
+  if (p === 'XAUUSD') return pipSize * 100;
+  if (p.endsWith('USD')) return 10;
+  if (p.startsWith('USD')) return round2((pipSize / (Number(price) || 1)) * 100000);
+  
+  // Crosses without USD
+  const crosses = {
+    'GBPCAD': 7.3,
+    'EURGBP': 12.5,
+    'EURAUD': 6.5,
+    'GBPCHF': 11.2,
+    'EURCHF': 11.0,
+    'AUDCAD': 7.4
+  };
+  if (crosses[p]) return crosses[p];
+  
+  if (p.endsWith('JPY')) return 6.7;
+  return 10;
+}
+
+function calcTrade(t, balanceBefore = 0){
+  const pipSize = pipSizeFor(t.pair);
+  const isOpen = (t.exit === '' || t.exit == null);
+
+  let direction = null;
+  if (t.stopLoss && t.entry) {
+    const sl = Number(t.stopLoss);
+    const en = Number(t.entry);
+    if (sl > 0 && en > 0 && sl !== en) {
+      direction = sl < en ? 'BUY' : 'SELL';
+    }
+  }
+
+  if (!direction) {
+    return { pips: null, result: 'NO_STOP', riskPips: null, rewardPips: null, rr: null, r: null, pct: null, isOpen, pipSize, direction: null, riskPct: DEFAULT_RISK_PCT, moneyResult: null, riskMoney: null, lotSize: 0 };
+  }
+
+  const entry = Number(t.entry);
+  const stopLoss = Number(t.stopLoss);
+  const takeProfit = Number(t.takeProfit);
+  
+  let riskPips = round1(Math.abs(entry - stopLoss) / pipSize);
+  
+  let rewardPips = null;
+  if (takeProfit > 0) {
+    rewardPips = round1(Math.abs(takeProfit - entry) / pipSize);
+  }
+
+  let rr = null;
+  if (riskPips && rewardPips) {
+    rr = round2(rewardPips / riskPips);
+  }
+
+  let pips = null;
+  if (!isOpen){
+    const x = Number(t.exit);
+    if (!isNaN(x)){
+      const diff = direction === 'BUY' ? (x - entry) : (entry - x);
+      pips = round1(diff / pipSize);
+    }
+  }
+
+  let result = 'OPEN';
+  if (pips !== null){
+    if (pips > 1) result = 'WIN';
+    else if (pips < -1) result = 'LOSS';
+    else result = 'BE';
+  }
+
+  let r = null;
+  if (riskPips > 0 && pips !== null){
+    r = round2(pips / riskPips);
+  }
+
+  let moneyResult = null;
+  let riskMoney = null;
+  let lotSize = Number(t.lotSize) || 0;
+  
+  if (lotSize > 0 && pips !== null) {
+    const pipValue = getPipValue(t.pair, t.exit || t.entry);
+    moneyResult = round2(pips * pipValue * lotSize);
+    if (riskPips !== null) {
+      riskMoney = round2(riskPips * pipValue * lotSize);
+    }
+  }
+
+  let riskPct = (t.riskPct === '' || t.riskPct == null) ? DEFAULT_RISK_PCT : Number(t.riskPct);
+  let pct = null;
+  
+  if (lotSize > 0 && balanceBefore > 0 && moneyResult !== null) {
+    pct = round2(moneyResult / balanceBefore * 100);
+  } else if (r !== null) {
+    pct = round2(r * riskPct);
+  }
+
+  return { pips, result, riskPips, rewardPips, rr, r, pct, isOpen, pipSize, direction, riskPct, moneyResult, riskMoney, lotSize, balanceBefore };
+}
+
+/* ------------------------------------------------------------
+   SUMMARY
+   ------------------------------------------------------------ */
+function summarize(trades){
+  const map = state.calcMap || {};
+  const getC = t => map[t.id] || calcTrade(t, 0);
+  
+  const valid = trades.filter(t => getC(t).result !== 'NO_STOP');
+  const closed = valid.filter(t => getC(t).result !== 'OPEN' && getC(t).result !== 'NO_STOP');
+  const wins = closed.filter(t => getC(t).result === 'WIN');
+  const losses = closed.filter(t => getC(t).result === 'LOSS');
+  const bes = closed.filter(t => getC(t).result === 'BE');
+
+  const netPips = round1(closed.reduce((a,t)=> a + (getC(t).pips || 0), 0));
+  const netR = round2(closed.reduce((a,t)=> a + (getC(t).r || 0), 0));
+  const netMoney = round2(closed.reduce((a,t)=> a + (getC(t).moneyResult || 0), 0));
+  const pcts = closed.map(t => getC(t).pct).filter(v => v != null);
+  const netPct = round2(pcts.reduce((a,p)=> a + p, 0));
+
+  const winRate = (wins.length + losses.length)
+    ? round1(wins.length / (wins.length + losses.length) * 100)
+    : null;
+
+  const gpR = closed.filter(t => (getC(t).r || 0) > 0).reduce((a,t)=> a + getC(t).r, 0);
+  const glR = Math.abs(closed.filter(t => (getC(t).r || 0) < 0).reduce((a,t)=> a + getC(t).r, 0));
+  const pfR = glR > 0 ? round2(gpR / glR) : (gpR > 0 ? Infinity : null);
+
+  const avgWinR = wins.length ? round2(wins.reduce((a,t)=> a + (getC(t).r||0),0) / wins.length) : null;
+  const avgLossR = losses.length ? round2(losses.reduce((a,t)=> a + (getC(t).r||0),0) / losses.length) : null;
+  
+  const expectancy = closed.length ? round2(netR / closed.length) : null;
+
+  const ordered = [...closed].sort((a,b)=> new Date(a.dateTime) - new Date(b.dateTime));
+  let currentStreak = 0, currentStreakType = null;
+  for (let i=ordered.length-1; i>=0; i--){
+    const r = getC(ordered[i]).result;
+    if (r === 'BE') continue;
+    if (currentStreakType === null){ currentStreakType = r; currentStreak = 1; }
+    else if (r === currentStreakType) currentStreak++;
+    else break;
+  }
+
+  let equity = 0, peak = 0, maxDD = 0;
+  for (const t of ordered){
+    equity += (getC(t).r || 0);
+    if (equity > peak) peak = equity;
+    const dd = peak - equity;
+    if (dd > maxDD) maxDD = dd;
+  }
+
+  const openCount = trades.length - closed.length;
+
+  return {
+    count: closed.length, openCount,
+    wins: wins.length, losses: losses.length, bes: bes.length,
+    netPips, netR, netPct, netMoney, winRate, pfR, avgWinR, avgLossR,
+    expectancy, currentStreak, currentStreakType, maxDD: round2(maxDD),
+  };
+}
+
+/* ------------------------------------------------------------
+   PERIOD RANGE
+   ------------------------------------------------------------ */
+function periodRange(period, ref){
+  if (period === 'week'){
+    const start = startOfWeek(ref);
+    const end = addDays(start, 7);
+    const last = addDays(start, 6);
+    return { start, end, label: `${start.getDate()} ${MONTHS[start.getMonth()]} – ${last.getDate()} ${MONTHS[last.getMonth()]} ${last.getFullYear()}` };
+  }
+  if (period === 'month'){
+    const start = startOfMonth(ref);
+    return { start, end: addMonths(start,1), label: `${MONTHS[start.getMonth()]} ${start.getFullYear()}` };
+  }
+  if (period === 'year'){
+    const start = startOfYear(ref);
+    return { start, end: addYears(start,1), label: String(start.getFullYear()) };
+  }
+  return { start: new Date(0), end: new Date(8.64e15), label: 'All time' };
+}
+function shiftPeriod(ref, period, dir){
+  if (period === 'week')  return addDays(ref, 7*dir);
+  if (period === 'month') return addMonths(ref, dir);
+  if (period === 'year')  return addYears(ref, dir);
+  return ref;
+}
+
+/* ------------------------------------------------------------
+   SAMPLE DATA
+   ------------------------------------------------------------ */
+function buildSampleTrades(){
+  const now = new Date();
+  const mk = (offsetDays, hour, minute) => {
+    const d = addDays(now, offsetDays);
+    d.setHours(hour, minute, 0, 0);
+    const p = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+  const id = () => 't_' + Math.random().toString(36).slice(2,10);
+
+  return [
+    { id: id(), pair:'EURUSD', entry:1.10324, stopLoss:1.10200, takeProfit:1.10700, exit:1.10700, lotSize:0.10, dateTime: mk(-12, 10, 0), notes: 'Test trade. Hit take profit.' },
+    { id: id(), pair:'USDJPY', entry:149.500, stopLoss:150.000, takeProfit:148.500, exit:150.000, lotSize:0.02, dateTime: mk(-5, 9, 15), notes: 'Bad entry, got stopped out.' },
+    { id: id(), pair:'AUDUSD', entry:0.66500, stopLoss:0.66000, takeProfit:0.67500, exit:0.66800, lotSize:0.02, dateTime: mk(-3, 11, 45), notes: 'Closed early because I got scared.' },
+    { id: id(), pair:'GBPUSD', entry:1.26500, stopLoss:1.26000, takeProfit:1.27500, exit:'', lotSize:0.02, dateTime: mk(-2, 14, 30), notes: 'Waiting for this one to play out.' }
+  ];
+}
+
+/* ------------------------------------------------------------
+   FILTERING
+   ------------------------------------------------------------ */
+function filterTrades(trades){
+  const f = state.filters;
+  return trades.filter(t => {
+    if (f.q){
+      const q = f.q.toLowerCase();
+      const hay = (t.pair + ' ' + (t.notes||'')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (f.pair && t.pair !== f.pair) return false;
+    if (f.result){
+      const r = calcTrade(t).result;
+      if (r !== f.result) return false;
+    }
+    if (f.from){
+      const d = new Date(t.dateTime);
+      if (d < new Date(f.from + 'T00:00')) return false;
+    }
+    if (f.to){
+      const d = new Date(t.dateTime);
+      if (d > new Date(f.to + 'T23:59')) return false;
+    }
+    return true;
+  });
+}
+
+/* ============================================================
+   RENDER — TOP LEVEL
+   ============================================================ */
+function render(){
+  document.documentElement.dataset.theme = state.settings.theme;
+
+  const events = [];
+  state.trades.forEach(t => events.push({ date: new Date(t.dateTime), type: 'trade', data: t }));
+  (state.settings.cashFlows || []).forEach(cf => events.push({ date: new Date(cf.dateTime), type: 'cash', data: cf }));
+  events.sort((a,b) => a.date - b.date);
+
+  let bal = Number(state.settings.startingBalance) || 0;
+  let totalPL = 0;
+  const map = {};
+  
+  for (const e of events) {
+    if (e.type === 'trade') {
+      const c = calcTrade(e.data, bal);
+      map[e.data.id] = c;
+      if (c.result !== 'OPEN' && c.result !== 'NO_STOP' && c.moneyResult !== null) {
+        bal += c.moneyResult;
+        totalPL += c.moneyResult;
+      }
+    } else {
+      bal += Number(e.data.amount) * (e.data.type === 'deposit' ? 1 : -1);
+    }
+  }
+  
+  state.calcMap = map;
+  state.currentBalance = bal;
+  state.totalPL = totalPL;
+
+  $$('#bottomNav button').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === state.tab));
+
+  const sub = $('#headerSub');
+  if (sub){
+    if (state.tab === 'dashboard')      sub.textContent = fmtDateFull(new Date());
+    else if (state.tab === 'trades')    sub.textContent = state.trades.length + ' trade' + (state.trades.length === 1 ? '' : 's');
+    else if (state.tab === 'calendar')  sub.textContent = `${MONTHS[state.calRef.getMonth()]} ${state.calRef.getFullYear()}`;
+    else if (state.tab === 'analytics') sub.textContent = 'Performance breakdown';
+    else if (state.tab === 'settings')  sub.textContent = 'Preferences & backup';
+  }
+
+  const view = $('#view');
+  if (state.tab === 'dashboard')      view.innerHTML = renderDashboard();
+  else if (state.tab === 'trades')    view.innerHTML = renderTrades();
+  else if (state.tab === 'calendar')  view.innerHTML = renderCalendar();
+  else if (state.tab === 'analytics') view.innerHTML = renderAnalytics();
+  else if (state.tab === 'settings')  view.innerHTML = renderSettings();
+
+  if (state.tab === 'dashboard'){
+    const cv = document.getElementById('equityChart');
+    if (cv) drawEquityChart(cv);
+  }
+
+  const fab = document.getElementById('fab');
+  if (fab) fab.style.display = state.tab === 'settings' ? 'none' : 'block';
+}
+
+function renderPreservingFocus(){
+  const active = document.activeElement;
+  const id = active && active.id;
+  const s = active && active.selectionStart;
+  const e = active && active.selectionEnd;
+  render();
+  if (id){
+    const el = document.getElementById(id);
+    if (el){
+      el.focus();
+      if (s != null && el.setSelectionRange){
+        try { el.setSelectionRange(s, e); } catch(_) {}
+      }
+    }
+  }
+}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+function renderDashboard(){
+  const range = periodRange(state.dashPeriod, state.dashRef);
+  const inPeriod = state.trades.filter(t => {
+    const d = new Date(t.dateTime);
+    return d >= range.start && d < range.end;
+  });
+  const stats = summarize(inPeriod);
+
+  const periodTabs = ['week','month','year','all'].map(p =>
+    `<button data-action="set-period" data-period="${p}" class="${state.dashPeriod===p?'active':''}">${p.toUpperCase()}</button>`
+  ).join('');
+
+  const canNav = state.dashPeriod !== 'all';
+
+  const statCards = `
+    <div class="stats">
+      <div class="stat"><div class="label">Trades</div>
+        <div class="value">${stats.count}${stats.openCount?` <span class="small muted">+${stats.openCount} open</span>`:''}</div></div>
+      <div class="stat"><div class="label">Win rate</div>
+        <div class="value">${stats.winRate==null?'—':stats.winRate+'%'}</div></div>
+      <div class="stat"><div class="label">Wins / Losses</div>
+        <div class="value"><span class="pos">${stats.wins}</span> / <span class="neg">${stats.losses}</span></div></div>
+      <div class="stat"><div class="label">Breakeven</div>
+        <div class="value">${stats.bes}</div></div>
+      <div class="stat"><div class="label">Net pips</div>
+        <div class="value ${cls(stats.netPips)}">${sgn(stats.netPips,1)}</div></div>
+      <div class="stat"><div class="label">Net R</div>
+        <div class="value ${cls(stats.netR)}">${sgn(stats.netR,2)}R</div></div>
+      <div class="stat"><div class="label">Net %</div>
+        <div class="value ${cls(stats.netPct)}">${pctTxt(stats.netPct)}</div></div>
+      <div class="stat"><div class="label">Profit factor</div>
+        <div class="value">${stats.pfR==null?'—':(stats.pfR===Infinity?'∞':stats.pfR.toFixed(2))}</div></div>
+      <div class="stat"><div class="label">Expectancy</div>
+        <div class="value ${cls(stats.expectancy)}">${stats.expectancy==null?'—':sgn(stats.expectancy,2)+'R'}</div></div>
+      <div class="stat"><div class="label">Max drawdown</div>
+        <div class="value neg">${stats.maxDD ? '-' + stats.maxDD.toFixed(2) + 'R' : '—'}</div></div>
+      <div class="stat"><div class="label">Avg win / loss</div>
+        <div class="value"><span class="pos">${stats.avgWinR==null?'—':sgn(stats.avgWinR,2)+'R'}</span> / <span class="neg">${stats.avgLossR==null?'—':sgn(stats.avgLossR,2)+'R'}</span></div></div>
+      <div class="stat"><div class="label">Current streak</div>
+        <div class="value ${stats.currentStreakType==='WIN'?'pos':stats.currentStreakType==='LOSS'?'neg':''}">
+          ${stats.currentStreak ? stats.currentStreak + ' ' + (stats.currentStreakType==='WIN'?'win':'loss') + (stats.currentStreak > 1 ? 's' : '') : '—'}
+        </div></div>
+    </div>`;
+
+  const weekRows = computeWeekRows(inPeriod, 8);
+
+  const hasData = state.settings.startingBalance > 0 || (state.settings.cashFlows && state.settings.cashFlows.length > 0) || state.trades.length > 0;
+
+  const balDisplay = hasData 
+    ? '$' + state.currentBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})
+    : '<span style="font-size:16px; color:var(--muted)">Set your starting balance in Settings</span>';
+    
+  const plDisplay = hasData ? moneyTxt(state.totalPL) : '—';
+
+  return `
+    <div class="card">
+      <div class="period-switch">
+        <button class="nav" data-action="dash-prev" ${canNav?'':'disabled'}>‹</button>
+        <div>
+          <div class="period-label">${range.label}</div>
+          <div class="period-tabs">${periodTabs}</div>
+        </div>
+        <button class="nav" data-action="dash-next" ${canNav?'':'disabled'}>›</button>
+      </div>
+    </div>
+
+    <div class="card" style="background:linear-gradient(145deg, var(--surface), var(--surface2));">
+      <div class="row">
+        <div>
+          <div class="muted small">CURRENT BALANCE</div>
+          <div style="font-size:28px; font-weight:700; margin-top:4px;">${balDisplay}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="muted small">Trading P/L (all time)</div>
+          <div class="${cls(state.totalPL)}" style="font-size:18px; font-weight:700;">${plDisplay}</div>
+        </div>
+      </div>
+    </div>
+
+    ${statCards}
+
+    <div class="card">
+      <div class="row" style="margin-bottom:8px">
+        <h3 style="margin:0">Equity curve</h3>
+        <div class="seg" style="width:150px">
+          <button class="${state.equityMode==='pct'?'active':''}" data-action="equity-mode" data-mode="pct">%</button>
+          <button class="${state.equityMode==='r'?'active':''}" data-action="equity-mode" data-mode="r">R</button>
+          <button class="${state.equityMode==='money'?'active':''}" data-action="equity-mode" data-mode="money">Money</button>
+        </div>
+      </div>
+      <canvas id="equityChart"></canvas>
+    </div>
+
+    ${weekRows}
+
+    ${state.trades.length === 0 ? `
+      <div class="card empty">
+        <div class="big">📓</div>
+        <p>No trades yet. Tap <b>+</b> to add your first one.</p>
+      </div>` : ''}
+  `;
+}
+
+function computeWeekRows(trades, limit){
+  const map = new Map();
+  for (const t of trades){
+    const d = new Date(t.dateTime);
+    const k = weekKey(d);
+    if (!map.has(k)) map.set(k, []);
+    map.get(k).push(t);
+  }
+  const rows = [...map.entries()]
+    .sort((a,b) => b[0].localeCompare(a[0]))
+    .slice(0, limit);
+
+  if (!rows.length) return '';
+
+  const body = rows.map(([k, ts]) => {
+    const s = summarize(ts);
+    const wkStart = new Date(k + 'T00:00');
+    const wkEnd = addDays(wkStart, 6);
+    return `
+      <tr>
+        <td>${fmtDateShort(wkStart)} – ${wkEnd.getDate()} ${MONTHS[wkEnd.getMonth()]}</td>
+        <td class="num">${s.count}</td>
+        <td class="num pos">${s.wins}</td>
+        <td class="num neg">${s.losses}</td>
+        <td class="num ${cls(s.netPct)}">${pctTxt(s.netPct)}</td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div class="card">
+      <h3>Week by week</h3>
+      <table class="tbl">
+        <thead><tr><th>Week</th><th class="num">Trades</th><th class="num">W</th><th class="num">L</th><th class="num">P/L (%)</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
+}
+
+function drawEquityChart(canvas){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W = Math.max(200, rect.width);
+  const H = 180;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  const range = periodRange(state.dashPeriod, state.dashRef);
+  const inPeriod = state.trades
+    .filter(t => { const d = new Date(t.dateTime); return d >= range.start && d < range.end; })
+    .filter(t => {
+      const c = state.calcMap[t.id];
+      return c && c.result !== 'OPEN' && c.result !== 'NO_STOP';
+    })
+    .sort((a,b) => new Date(a.dateTime) - new Date(b.dateTime));
+
+  const colors = getComputedStyle(document.documentElement);
+  const muted = colors.getPropertyValue('--muted').trim() || '#8b949e';
+
+  if (!inPeriod.length){
+    ctx.fillStyle = muted;
+    ctx.font = '13px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No closed trades in this period', W/2, H/2);
+    return;
+  }
+
+  const mode = state.equityMode || 'pct';
+  const series = [0];
+  let cum = 0;
+  for (const t of inPeriod){
+    const c = state.calcMap[t.id];
+    if (mode === 'pct') cum += (c.pct || 0);
+    else if (mode === 'r') cum += (c.r || 0);
+    else cum += (c.moneyResult || 0);
+    series.push(cum);
+  }
+
+  const minV = Math.min(...series, 0);
+  const maxV = Math.max(...series, 0);
+  const span = (maxV - minV) || 1;
+  const plotL = 8, plotR = W - 8, plotT = 16, plotB = H - 22;
+  const plotW = plotR - plotL, plotH = plotB - plotT;
+  const x = i => plotL + (series.length === 1 ? 0 : (i / (series.length - 1)) * plotW);
+  const y = v => plotB - ((v - minV) / span) * plotH;
+
+  const grid   = colors.getPropertyValue('--border').trim() || '#2a3441';
+  const green  = colors.getPropertyValue('--green').trim() || '#3fb950';
+  const red    = colors.getPropertyValue('--red').trim() || '#f85149';
+
+  ctx.strokeStyle = grid;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(plotL, y(0));
+  ctx.lineTo(plotR, y(0));
+  ctx.stroke();
+
+  const last = series[series.length - 1];
+  const lineColor = last >= 0 ? green : red;
+
+  const grad = ctx.createLinearGradient(0, plotT, 0, plotB);
+  grad.addColorStop(0, lineColor + '66');
+  grad.addColorStop(1, lineColor + '00');
+  ctx.beginPath();
+  ctx.moveTo(x(0), y(series[0]));
+  for (let i=1;i<series.length;i++) ctx.lineTo(x(i), y(series[i]));
+  ctx.lineTo(x(series.length-1), y(0));
+  ctx.lineTo(x(0), y(0));
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(x(0), y(series[0]));
+  for (let i=1;i<series.length;i++) ctx.lineTo(x(i), y(series[i]));
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(x(series.length-1), y(last), 3.5, 0, Math.PI*2);
+  ctx.fillStyle = lineColor;
+  ctx.fill();
+
+  ctx.fillStyle = muted;
+  ctx.font = '11px -apple-system, sans-serif';
+  ctx.textAlign = 'right';
+  const unit = mode === 'pct' ? '%' : mode === 'r' ? 'R' : '$';
+  ctx.fillText((maxV>=0?'+':'') + maxV.toFixed(1) + unit, plotR, plotT + 4);
+  ctx.fillText((minV>=0?'+':'') + minV.toFixed(1) + unit, plotR, plotB + 2);
+  ctx.textAlign = 'left';
+  ctx.fillText(inPeriod.length + ' trades', plotL, H - 4);
+}
+
+/* ============================================================
+   TRADES SCREEN
+   ============================================================ */
+function renderTrades(){
+  const filtered = filterTrades(state.trades);
+
+  if (!state.trades.length){
+    return `<div class="card empty"><div class="big">📓</div><p>No trades yet. Tap <b>+</b> below to add your first trade.</p></div>`;
+  }
+
+  const f = state.filters;
+  const activeFilters = (f.pair || f.result || f.from || f.to);
+
+  const byWeek = new Map();
+  for (const t of filtered){
+    const d = new Date(t.dateTime);
+    const k = weekKey(d);
+    if (!byWeek.has(k)) byWeek.set(k, []);
+    byWeek.get(k).push(t);
+  }
+  const weeks = [...byWeek.entries()].sort((a,b) => b[0].localeCompare(a[0]));
+
+  const weekCards = weeks.map(([k, ts]) => {
+    const ws = summarize(ts);
+    const start = new Date(k + 'T00:00');
+    const end = addDays(start, 6);
+    const expanded = state.tradesExpanded[k] !== false;
+    const byDay = new Map();
+    for (const t of ts){
+      const dk = dayKey(new Date(t.dateTime));
+      if (!byDay.has(dk)) byDay.set(dk, []);
+      byDay.get(dk).push(t);
+    }
+    const days = [...byDay.entries()].sort((a,b) => b[0].localeCompare(a[0])).map(([dk, dts]) => {
+      const ds = summarize(dts);
+      const dayDate = new Date(dk + 'T00:00');
+      const rows = dts
+        .sort((a,b) => new Date(b.dateTime) - new Date(a.dateTime))
+        .map(tradeRowHtml).join('');
+      return `
+        <div class="day-group">
+          <div class="day-header">${fmtDateShort(dayDate)} · ${ds.count} trades · ${ds.wins}W ${ds.losses}L · ${sgn(ds.netPips,1)} pips · ${sgn(ds.netR,2)}R ${ds.netMoney ? '· '+moneyTxt(ds.netMoney) : ''}</div>
+          ${rows}
+        </div>`;
+    }).join('');
+    return `
+      <div class="week ${expanded?'open':''}">
+        <div class="week-header" data-action="toggle-week" data-week="${k}">
+          <div class="row1">
+            <div class="week-title">${start.getDate()} ${MONTHS[start.getMonth()]} – ${end.getDate()} ${MONTHS[end.getMonth()]}</div>
+            <div class="week-pips ${cls(ws.netPct)}">${pctTxt(ws.netPct)}</div>
+          </div>
+          <div class="week-sub">${ws.count} trades · ${ws.wins}W ${ws.losses}L · ${sgn(ws.netPips,1)} pips · ${sgn(ws.netR,2)}R ${ws.netMoney ? '· '+moneyTxt(ws.netMoney) : ''}</div>
+        </div>
+        <div class="week-body">${days}</div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="search-bar">
+      <input id="searchInput" type="search" placeholder="Search pair or notes…" value="${esc(f.q)}">
+      <button data-action="open-filters">${activeFilters?'⚙️*':'⚙️'}</button>
+    </div>
+    ${weeks.length ? weekCards : `<div class="card empty">No trades match your filters.</div>`}
+  `;
+}
+
+function tradeRowHtml(t){
+  const c = state.calcMap[t.id] || calcTrade(t, 0);
+  const d = new Date(t.dateTime);
+  const dirCls = c.direction === 'BUY' ? 'buy' : c.direction === 'SELL' ? 'sell' : 'be';
+  const thumb = t.thumb ? `<img class="trade-thumb" src="${t.thumb}" alt="">` : `<div class="trade-thumb placeholder">·</div>`;
+  const pipsDisplay = c.isOpen ? 'OPEN' : c.result === 'NO_STOP' ? 'NO STOP' : sgn(c.pips, 1);
+  const pctDisplay = c.pct == null ? '—' : pctTxt(c.pct);
+  const resultLabel = c.isOpen ? 'OPEN' : (c.result === 'BE' ? 'BE' : c.result === 'NO_STOP' ? '' : c.result);
+  const rDisplay = c.r == null ? '' : sgn(c.r, 2) + 'R';
+  const moneyDisplay = c.moneyResult != null ? `<span style="font-size:11px; font-weight:normal; opacity:0.7; margin-left:4px;">${moneyTxt(c.moneyResult)}</span>` : '';
+  
+  return `
+    <div class="trade-row" data-action="open-trade" data-id="${t.id}">
+      ${thumb}
+      <div class="trade-main">
+        <div class="line1">
+          <span>${esc(t.pair)}</span>
+          <span class="badge ${dirCls}">${c.direction || '—'}</span>
+        </div>
+        <div class="line2">${fmtTime(d)}</div>
+      </div>
+      <div class="trade-pips ${cls(c.pct)}">
+        ${pctDisplay}${moneyDisplay}
+        <div class="trade-result">${pipsDisplay} pips · ${resultLabel} · ${rDisplay}</div>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   CALENDAR
+   ============================================================ */
+function renderCalendar(){
+  const ref = state.calRef;
+  const year = ref.getFullYear(), month = ref.getMonth();
+  const first = new Date(year, month, 1);
+  const last = new Date(year, month + 1, 0);
+  const startPad = (first.getDay() - 1 + 7) % 7;
+
+  const byDay = new Map();
+  for (const t of state.trades){
+    const c = state.calcMap[t.id] || calcTrade(t, 0);
+    if (c.result === 'OPEN' || c.result === 'NO_STOP') continue;
+    const d = new Date(t.dateTime);
+    if (d.getFullYear() !== year || d.getMonth() !== month) continue;
+    const k = dayKey(d);
+    if (!byDay.has(k)) byDay.set(k, []);
+    byDay.get(k).push(t);
+  }
+
+  const cells = [];
+  for (let i=0;i<startPad;i++) cells.push({ empty: true });
+  for (let d=1; d<=last.getDate(); d++){
+    const date = new Date(year, month, d);
+    const k = dayKey(date);
+    const ts = byDay.get(k) || [];
+    const s = ts.length ? summarize(ts) : null;
+    cells.push({ date, k, s, count: ts.length });
+  }
+  while (cells.length % 7 !== 0) cells.push({ empty: true });
+
+  let head = '';
+  for (let i=0;i<7;i++){
+    const wd = (1 + i) % 7;
+    head += `<div class="head">${DAYS[wd]}</div>`;
+  }
+  head += `<div class="head">Wk</div>`;
+
+  let body = '';
+  for (let r=0; r<cells.length/7; r++){
+    const rowCells = cells.slice(r*7, r*7+7);
+    let weekTotal = 0;
+    for (const c of rowCells){
+      if (c.s) weekTotal += c.s.netPct;
+    }
+    for (const c of rowCells){
+      if (c.empty){
+        body += `<div class="cal-day empty"></div>`;
+      } else {
+        const s = c.s;
+        const cls2 = s ? (s.netPct > 0 ? 'pos' : s.netPct < 0 ? 'neg' : '') : '';
+        const val = s ? sgn(s.netPct, 1) : '';
+        body += `
+          <button class="cal-day ${cls2}" data-action="cal-day" data-day="${c.k}">
+            <span class="cal-num">${c.date.getDate()}</span>
+            ${val ? `<span class="cal-val">${val}</span>` : ''}
+          </button>`;
+      }
+    }
+    body += `<div class="cal-week-total ${cls(weekTotal)}">${weekTotal?sgn(weekTotal,1):'—'}</div>`;
+  }
+
+  let selectedBlock = '';
+  if (state.selectedDay){
+    const ts = state.trades.filter(t => dayKey(new Date(t.dateTime)) === state.selectedDay);
+    if (ts.length){
+      selectedBlock = `
+        <div class="card">
+          <h3>${fmtDateFull(new Date(state.selectedDay + 'T00:00'))}</h3>
+          ${ts.sort((a,b)=>new Date(b.dateTime)-new Date(a.dateTime)).map(tradeRowHtml).join('')}
+        </div>`;
+    }
+  }
+
+  return `
+    <div class="card">
+      <div class="period-switch">
+        <button class="nav" data-action="cal-prev">‹</button>
+        <div class="period-label">${MONTHS[month]} ${year}</div>
+        <button class="nav" data-action="cal-next">›</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="cal">${head}${body}</div>
+    </div>
+    ${selectedBlock}
+  `;
+}
+
+/* ============================================================
+   ANALYTICS
+   ============================================================ */
+function groupBy(trades, keyFn){
+  const map = new Map();
+  for (const t of trades){
+    const k = keyFn(t);
+    if (!map.has(k)) map.set(k, []);
+    map.get(k).push(t);
+  }
+  return map;
+}
+function groupRow(label, ts){
+  const s = summarize(ts);
+  return { label, count: s.count, wins: s.wins, losses: s.losses, winRate: s.winRate, netPips: s.netPips, netR: s.netR, netPct: s.netPct };
+}
+
+function renderGroupTable(title, rows, emptyText){
+  if (!rows.length){
+    return `<div class="card"><h3>${esc(title)}</h3><p class="muted small" style="margin:6px 0 0">${esc(emptyText||'No data yet.')}</p></div>`;
+  }
+  const body = rows.map(r => `
+    <tr>
+      <td>${esc(r.label)}</td>
+      <td class="num">${r.count}</td>
+      <td class="num pos">${r.wins}</td>
+      <td class="num neg">${r.losses}</td>
+      <td class="num">${r.winRate==null?'—':r.winRate+'%'}</td>
+      <td class="num ${cls(r.netPct)}">${pctTxt(r.netPct)}</td>
+    </tr>`).join('');
+  return `
+    <div class="card">
+      <h3>${esc(title)}</h3>
+      <table class="tbl">
+        <thead><tr><th>${esc(title.split(' by ')[1]||'')||'—'}</th><th class="num">#</th><th class="num">W</th><th class="num">L</th><th class="num">WR</th><th class="num">P/L</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
+}
+
+function renderDeeperTable(title, rows, emptyText){
+  if (!rows.length){
+    return `<div class="card"><h3>${esc(title)}</h3><p class="muted small" style="margin:6px 0 0">${esc(emptyText||'No data yet.')}</p></div>`;
+  }
+  const body = rows.map(r => {
+    const small = r.count < 5 ? ' <span class="small muted">(small sample)</span>' : '';
+    return `
+      <tr>
+        <td>${esc(r.label)}${small}</td>
+        <td class="num">${r.count}</td>
+        <td class="num pos">${r.wins}</td>
+        <td class="num neg">${r.losses}</td>
+        <td class="num">${r.winRate==null?'—':r.winRate+'%'}</td>
+        <td class="num ${cls(r.netPips)}">${sgn(r.netPips,1)}</td>
+        <td class="num ${cls(r.netR)}">${sgn(r.netR,2)}R</td>
+      </tr>`;
+  }).join('');
+  return `
+    <div class="card">
+      <h3>${esc(title)}</h3>
+      <table class="tbl">
+        <thead><tr><th>${esc(title.split(' by ')[1]||'')||'—'}</th><th class="num">#</th><th class="num">W</th><th class="num">L</th><th class="num">WR</th><th class="num">Pips</th><th class="num">R</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
+}
+
+function renderMonthByWeek(){
+  const closed = state.trades.filter(t => {
+    const c = state.calcMap[t.id];
+    return c && c.result !== 'OPEN' && c.result !== 'NO_STOP';
+  });
+  if (!closed.length) return '';
+  
+  const monthMap = new Map();
+  for (const t of closed) {
+    const d = new Date(t.dateTime);
+    const mKey = monthKey(d);
+    if (!monthMap.has(mKey)) monthMap.set(mKey, { year: d.getFullYear(), month: d.getMonth(), trades: [] });
+    monthMap.get(mKey).trades.push(t);
+  }
+  
+  const sortedMonths = [...monthMap.entries()].sort((a,b) => b[0].localeCompare(a[0]));
+  
+  let html = '';
+  for (const [mKey, data] of sortedMonths) {
+    const mStat = summarize(data.trades);
+    const mName = `${MONTHS[data.month]} ${data.year}`;
+    
+    const firstOfMonth = new Date(data.year, data.month, 1);
+    const lastOfMonth = new Date(data.year, data.month + 1, 0);
+    let curr = startOfWeek(firstOfMonth);
+    
+    let weekRows = '';
+    let weekIndex = 1;
+    
+    while (curr <= lastOfMonth) {
+      const wStart = new Date(curr);
+      const wEnd = addDays(wStart, 6);
+      
+      const wTrades = data.trades.filter(t => {
+        const d = new Date(t.dateTime);
+        return d >= wStart && d <= new Date(wEnd.getFullYear(), wEnd.getMonth(), wEnd.getDate(), 23, 59, 59);
+      });
+      
+      const wStat = summarize(wTrades);
+      weekRows += `
+        <tr>
+          <td>Week ${weekIndex}</td>
+          <td class="num">${wStat.count}</td>
+          <td class="num pos">${wStat.wins}</td>
+          <td class="num neg">${wStat.losses}</td>
+          <td class="num ${cls(wStat.netPct)}">${pctTxt(wStat.netPct)}</td>
+        </tr>
+      `;
+      
+      curr = addDays(wStart, 7);
+      weekIndex++;
+    }
+    
+    const badgeCls = mStat.netPct > 0 ? '' : mStat.netPct < 0 ? 'neg' : 'neu';
+    
+    html += `
+      <div class="month-card">
+        <div class="month-header">
+          <span class="month-title">${mName}</span>
+          <span class="month-total-badge ${badgeCls}">${pctTxt(mStat.netPct)}</span>
+        </div>
+        <table class="tbl" style="margin:0">
+          <thead><tr><th>WEEK</th><th class="num">TRADES</th><th class="num">W</th><th class="num">L</th><th class="num">P/L</th></tr></thead>
+          <tbody>${weekRows}</tbody>
+        </table>
+        <div class="month-footer">
+          ${mStat.count} trades / <span class="pos">${mStat.wins} wins</span> / <span class="neg">${mStat.losses} losses</span>
+        </div>
+      </div>
+    `;
+  }
+  
+  return `<div class="month-grid">${html}</div>`;
+}
+
+function renderAnalytics(){
+  if (!state.trades.length){
+    return `<div class="card empty"><div class="big">📊</div><p>Add some trades to see analytics.</p></div>`;
+  }
+  const closed = state.trades.filter(t => {
+    const c = state.calcMap[t.id];
+    return c && c.result !== 'OPEN' && c.result !== 'NO_STOP';
+  });
+  const closedCount = closed.length;
+  const threshold = 30;
+
+  const pairRows = [...groupBy(closed, t => t.pair).entries()].map(([k, ts]) => groupRow(k, ts)).sort((a,b) => b.netPct - a.netPct);
+  const dirRows = [...groupBy(closed, t => state.calcMap[t.id].direction).entries()].map(([k, ts]) => groupRow(k, ts)).sort((a,b) => b.netPct - a.netPct);
+
+  const dowRows = [];
+  for (let i=0;i<7;i++){
+    const wd = (1 + i) % 7;
+    const ts = closed.filter(t => new Date(t.dateTime).getDay() === wd);
+    if (ts.length) dowRows.push(groupRow(DAYS[wd], ts));
+  }
+  dowRows.sort((a,b) => b.netPct - a.netPct);
+
+  const hourMap = new Map();
+  for (const t of closed){
+    const h = new Date(t.dateTime).getHours();
+    if (!hourMap.has(h)) hourMap.set(h, []);
+    hourMap.get(h).push(t);
+  }
+  const hourRows = [...hourMap.entries()].sort((a,b) => a[0]-b[0]).map(([h, ts]) => groupRow(String(h).padStart(2,'0') + ':00', ts));
+  hourRows.sort((a,b) => b.netPct - a.netPct);
+
+  const wkMap = new Map();
+  for (const t of closed){
+    const k = weekKey(new Date(t.dateTime));
+    if (!wkMap.has(k)) wkMap.set(k, []);
+    wkMap.get(k).push(t);
+  }
+  const wkRows = [...wkMap.entries()].sort((a,b) => a[0].localeCompare(b[0])).map(([k, ts]) => groupRow(k, ts));
+  wkRows.sort((a,b) => b.netPct - a.netPct);
+
+  const yearMap = groupBy(closed, t => yearKey(new Date(t.dateTime)));
+  const yearRows = [...yearMap.entries()].sort((a,b) => b[0].localeCompare(a[0])).map(([k, ts]) => groupRow(k, ts));
+
+  let deeperHtml = '';
+  let accordionHeader = '';
+
+  if (closedCount < threshold) {
+    accordionHeader = `
+      <div class="card" style="padding:16px;">
+        <h2 style="margin:0; font-size:18px;">Deeper analysis</h2>
+      </div>
+    `;
+    deeperHtml = `
+      <div class="card" style="text-align:center; padding: 32px 16px;">
+        <div style="font-size:24px; margin-bottom:8px;">🔒</div>
+        <p class="muted" style="margin:0;">Deeper analysis unlocks after ${threshold} trades.<br>You have ${closedCount} so far.</p>
+      </div>
+    `;
+  } else {
+    accordionHeader = `
+      <div class="card" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center; padding:16px;" data-action="toggle-deeper">
+        <h2 style="margin:0; font-size:18px;">Deeper analysis</h2>
+        <span style="font-size:20px; color:var(--muted);">${state.deeperAnalysisOpen ? '▲' : '▼'}</span>
+      </div>
+    `;
+    deeperHtml = state.deeperAnalysisOpen ? `
+      <div style="border-top:1px solid var(--border);">
+        ${renderDeeperTable('By pair', pairRows)}
+        ${renderDeeperTable('By direction', dirRows)}
+        ${renderDeeperTable('By day of week', dowRows)}
+        ${renderDeeperTable('By hour of day', hourRows)}
+        ${renderDeeperTable('Win rate vs trades per week', wkRows)}
+      </div>
+    ` : '';
+  }
+
+  return `
+    <div style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+      <h2 style="margin:0; font-size:18px;">Month-by-Month Results</h2>
+    </div>
+    ${renderMonthByWeek()}
+    
+    <div style="margin-top:20px; margin-bottom:12px;">
+      <h2 style="margin:0; font-size:18px;">Yearly Results</h2>
+    </div>
+    ${renderDeeperTable('Yearly summary', yearRows)}
+    
+    <div style="margin-top:20px;">
+      ${accordionHeader}
+      ${deeperHtml}
+    </div>
+  `;
+}
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+function renderSettings(){
+  const s = state.settings;
+  
+  const cashFlows = (s.cashFlows || []).sort((a,b) => new Date(b.dateTime) - new Date(a.dateTime));
+  const cfRows = cashFlows.map(cf => `
+    <div class="row" style="margin-bottom:6px; border-bottom:1px solid var(--border); padding-bottom:6px;">
+      <div>${fmtDateShort(new Date(cf.dateTime))}</div>
+      <div>${cf.type === 'deposit' ? 'Deposit' : 'Withdrawal'}</div>
+      <div class="${cf.type === 'deposit' ? 'pos' : 'neg'}" style="font-weight:700">
+        ${cf.type === 'deposit' ? '+' : '-'}${moneyTxt(cf.amount).replace('$','')}
+      </div>
+      <button class="icon-btn" data-action="del-cf" data-id="${cf.id}">✕</button>
+    </div>
+  `).join('');
+
+  return `
+    <div class="card">
+      <h3>Account</h3>
+      <div class="grid2">
+        <label class="field"><span>Starting balance</span>
+          <input inputmode="decimal" value="${s.startingBalance}" data-setting="startingBalance">
+        </label>
+        <label class="field"><span>Currency</span>
+          <input value="${esc(s.currency)}" data-setting="currency">
+        </label>
+      </div>
+      <button class="btn full" data-action="toggle-theme" style="margin-top:6px">Switch to ${s.theme==='dark'?'light':'dark'} theme</button>
+    </div>
+
+    <div class="card">
+      <h3>Deposits & Withdrawals</h3>
+      <p class="muted small" style="margin-bottom:12px">These change your account balance but are not counted as trading P/L.</p>
+      
+      ${cfRows || '<p class="muted small">No deposits or withdrawals logged.</p>'}
+      
+      <div style="background:var(--surface2); padding:12px; border-radius:10px; margin-top:12px;">
+        <h4 style="margin:0 0 8px; font-size:13px;">Add Cash Flow</h4>
+        <div class="grid2">
+          <select id="cfType" style="margin-bottom:8px">
+            <option value="deposit">Deposit</option>
+            <option value="withdrawal">Withdrawal</option>
+          </select>
+          <input type="text" inputmode="decimal" id="cfAmount" placeholder="Amount" style="margin-bottom:8px">
+        </div>
+        <input type="datetime-local" id="cfDate" value="${nowLocalInput()}" style="margin-bottom:8px">
+        <button class="btn primary full tiny" data-action="add-cf">Add Cash Flow</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Pip sizes (per pair)</h3>
+      ${Object.keys(s.pipSizes).length ? Object.entries(s.pipSizes).map(([pair, size]) => `
+        <div class="row" style="margin-bottom:6px; gap:8px">
+          <div style="flex:1">${esc(pair)}</div>
+          <input style="width:120px" inputmode="decimal" value="${fmtPipSize(size)}" data-setting="pipSizes.${esc(pair)}">
+        </div>`).join('') : '<p class="muted small">No custom pip sizes yet.</p>'}
+      <div class="row" style="margin-top:10px; gap:8px">
+        <input id="newPairName" placeholder="e.g. GBPJPY" style="flex:1">
+        <input id="newPairSize" placeholder="0.01" style="width:110px" inputmode="decimal">
+        <button class="btn tiny" data-action="add-pip-row">Add</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Data Tools</h3>
+      <div class="grid2" style="margin-bottom:8px">
+        <button class="btn" data-action="export-json">Export JSON</button>
+        <button class="btn" data-action="export-csv">Export CSV</button>
+      </div>
+      <button class="btn full" data-action="import-json" style="margin-bottom:12px">Import JSON backup</button>
+      <button class="btn danger full" data-action="clear-all">Delete ALL data</button>
+    </div>
+
+    <div class="card">
+      <h3>Sample data</h3>
+      <div class="grid2" style="margin-bottom:8px">
+        <button class="btn" data-action="load-samples">Load sample trades</button>
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   TRADE FORM
+   ============================================================ */
+function openTradeForm(id){
+  const existing = id ? state.trades.find(t => t.id === id) : null;
+  const t = existing ? { ...existing } : {
+    id: 't_' + Math.random().toString(36).slice(2,10),
+    pair: 'EURUSD', entry: '', stopLoss: '', takeProfit: '', exit: '',
+    dateTime: nowLocalInput(), notes: '', thumb: null,
+    riskPct: '', lotSize: ''
+  };
+
+  const pairOptions = ['EURUSD','GBPUSD','USDJPY','AUDUSD','USDCAD','XAUUSD','EURJPY','NZDUSD','GBPJPY','AUDJPY'];
+  
+  const body = `
+    <div class="field">
+      <span>Pair</span>
+      <input id="f_pair" list="pairList" value="${esc(t.pair)}" autocomplete="off">
+      <div id="err_pair" style="color:var(--red); font-size:12px; margin-top:4px;"></div>
+      <datalist id="pairList">${pairOptions.map(p=>`<option value="${p}">`).join('')}</datalist>
+    </div>
+    <div class="grid2">
+      <div class="field"><span>Entry price</span>
+        <input id="f_entry" inputmode="decimal" value="${esc(t.entry)}">
+        <div id="err_entry" style="color:var(--red); font-size:12px; margin-top:4px;"></div>
+      </div>
+      <div class="field"><span>Date & time</span>
+        <input id="f_dt" type="datetime-local" value="${esc(t.dateTime)}">
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field"><span>Stop-loss price</span>
+        <input id="f_sl" inputmode="decimal" value="${esc(t.stopLoss)}">
+        <div id="err_sl" style="color:var(--red); font-size:12px; margin-top:4px;"></div>
+      </div>
+      <div class="field"><span>Take-profit price</span>
+        <input id="f_tp" inputmode="decimal" value="${esc(t.takeProfit)}">
+        <div id="err_tp" style="color:var(--red); font-size:12px; margin-top:4px;"></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="field"><span>Lot size</span>
+        <input id="f_lot" inputmode="decimal" value="${esc(t.lotSize)}" placeholder="e.g. 0.10">
+        <div id="err_lot" style="color:var(--red); font-size:12px; margin-top:4px;"></div>
+      </div>
+      <div class="field"><span>Exit price <span class="muted small">(empty = open)</span></span>
+        <input id="f_exit" inputmode="decimal" value="${esc(t.exit)}" placeholder="still open">
+        <div id="err_exit" style="color:var(--red); font-size:12px; margin-top:4px;"></div>
+      </div>
+    </div>
+    
+    <div id="directionDisplay" style="margin-bottom:12px;"></div>
+
+    <details>
+      <summary>More options (screenshot, notes)</summary>
+      
+      <div class="field" style="margin-top:8px;"><span>Image (chart screenshot)</span>
+        <input type="file" accept="image/*" id="f_shot">
+        <div class="shot-preview" id="prev_shot"><span class="ph">No image</span></div>
+      </div>
+
+      <div class="field"><span>Notes</span>
+        <textarea id="f_notes" rows="4">${esc(t.notes || '')}</textarea>
+      </div>
+    </details>
+
+    <div id="globalError" style="color:var(--red); font-size:14px; font-weight:bold; margin-top:12px; display:none; padding: 10px; background: rgba(248,81,73,0.1); border-radius: 8px;"></div>
+    <div class="preview" id="livePreview"></div>
+  `;
+
+  const footer = `
+    <button class="btn" data-close-form>Cancel</button>
+    <button class="btn primary" id="saveTradeBtn" style="flex:1">${existing?'Save changes':'Add trade'}</button>
+  `;
+
+  const modal = openModal(existing ? 'Edit trade' : 'New trade', body, footer);
+
+  if (t.id) {
+    getImage(t.id).then(fullImg => {
+      if (fullImg) {
+        const previewEl = $('#prev_shot', modal);
+        if (previewEl) previewEl.innerHTML = `<img src="${fullImg}" alt="">`;
+      }
+    });
+  }
+
+  const updatePreview = () => {
+    const balBefore = existing ? (state.calcMap[t.id]?.balanceBefore || state.currentBalance) : state.currentBalance;
+    const c = calcTrade(t, balBefore);
+    const dirEl = $('#directionDisplay', modal);
+    
+    if (c.direction) {
+      dirEl.innerHTML = `<span class="dir-badge ${c.direction.toLowerCase()}">${c.direction}</span>`;
+    } else if (!$('#f_sl', modal).value) {
+      dirEl.innerHTML = `<span class="dir-badge none">Enter stop loss to detect direction</span>`;
+    } else {
+      dirEl.innerHTML = `<span class="dir-badge none">Invalid stop loss</span>`;
+    }
+
+    const riskMoneyStr = c.riskMoney != null && balBefore > 0 
+      ? moneyTxt(c.riskMoney) + ' (' + (c.riskMoney / balBefore * 100).toFixed(2) + '%)' 
+      : '—';
+
+    $('#livePreview', modal).innerHTML = `
+      <div class="preview-row"><span>Risk (pips)</span><b>${c.riskPips == null ? '—' : c.riskPips}</b></div>
+      <div class="preview-row"><span>Reward (pips)</span><b>${c.rewardPips == null ? '—' : c.rewardPips}</b></div>
+      <div class="preview-row"><span>R:R ratio</span><b>${c.rr ? '1:' + c.rr.toFixed(1) : '—'}</b></div>
+      <div class="preview-row"><span>Risk</span><b>${riskMoneyStr}</b></div>
+    `;
+  };
+  updatePreview();
+
+  const bind = (sel, key, transform) => {
+    const el = $(sel, modal);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      t[key] = transform ? transform(el.value) : el.value;
+      updatePreview();
+    });
+  };
+  bind('#f_pair', 'pair', v => v.toUpperCase());
+  bind('#f_entry', 'entry', v => v === '' ? '' : Number(v));
+  bind('#f_dt', 'dateTime');
+  bind('#f_sl', 'stopLoss', v => v === '' ? '' : Number(v));
+  bind('#f_tp', 'takeProfit', v => v === '' ? '' : Number(v));
+  bind('#f_lot', 'lotSize', v => v === '' ? '' : Number(v));
+  bind('#f_exit', 'exit', v => v === '' ? '' : Number(v));
+  bind('#f_notes', 'notes');
+
+  const shotHandler = (inputSel, key, previewSel) => {
+    const inp = $(inputSel, modal);
+    if (!inp) return;
+    inp.addEventListener('change', async () => {
+      const file = inp.files && inp.files[0];
+      if (!file) return;
+      try {
+        const dataUrl = await compressImage(file);
+        const thumb = await createThumb(dataUrl);
+        t.thumb = thumb;
+        t.pendingScreenshot = dataUrl;
+        $(previewSel, modal).innerHTML = `<img src="${dataUrl}" alt="">`;
+      } catch(e){ alert('Could not read that image.'); }
+    });
+  };
+  shotHandler('#f_shot', 'thumb', '#prev_shot');
+
+  $('#saveTradeBtn', modal).addEventListener('click', async () => {
+    try {
+      const errEl = $('#globalError', modal);
+      errEl.style.display = 'none';
+      errEl.textContent = '';
+      
+      let ok = true;
+      let firstErrId = null;
+      
+      const showErr = (id, msg) => {
+        if (!firstErrId) firstErrId = id;
+        const el = $('#' + id, modal);
+        if (el) {
+          const errDiv = el.parentElement.querySelector('div');
+          if (errDiv && errDiv.id.startsWith('err_')) errDiv.textContent = msg;
+          el.style.borderColor = 'var(--red)';
+        }
+        ok = false;
+      };
+
+      const clearErrs = () => {
+        $$('input', modal).forEach(i => i.style.borderColor = 'var(--border)');
+        $$('div[id^="err_"]', modal).forEach(d => d.textContent = '');
+      };
+
+      clearErrs();
+
+      const pair = $('#f_pair', modal).value.trim().toUpperCase();
+      if (!pair) showErr('f_pair', 'Pair is required');
+      
+      const entry = Number($('#f_entry', modal).value);
+      if (isNaN(entry) || entry <= 0) showErr('f_entry', 'Must be > 0');
+      
+      const sl = Number($('#f_sl', modal).value);
+      if (isNaN(sl) || sl <= 0) showErr('f_sl', 'Stop loss must be > 0');
+      else if (sl === entry) showErr('f_sl', 'Stop loss cannot be the same as the entry price');
+      
+      const tpStr = $('#f_tp', modal).value.trim();
+      let tp = '';
+      if (tpStr !== '') {
+        tp = Number(tpStr);
+        if (isNaN(tp) || tp <= 0) showErr('f_tp', 'Take profit must be > 0');
+        else if (ok) {
+          const slDist = Math.abs(sl - entry);
+          if (slDist / entry > 0.05) {
+            if (!confirm(`Stop loss is more than 5% away from entry (${entry} → ${sl}). Are you sure?`)) return;
+          }
+          const tpDist = Math.abs(tp - entry);
+          if (tpDist / entry > 0.05) {
+            if (!confirm(`Take profit is more than 5% away from entry (${entry} → ${tp}). Are you sure?`)) return;
+          }
+          const dir = sl < entry ? 'BUY' : 'SELL';
+          if (dir === 'BUY' && tp < entry) {
+            if (!confirm('Take profit is below entry for a BUY. Did you mean to type this?')) return;
+          }
+          if (dir === 'SELL' && tp > entry) {
+            if (!confirm('Take profit is above entry for a SELL. Did you mean to type this?')) return;
+          }
+        }
+      }
+      
+      const lotStr = $('#f_lot', modal).value.trim();
+      let lot = '';
+      if (lotStr !== '') {
+        lot = Number(lotStr);
+        if (isNaN(lot) || lot <= 0) showErr('f_lot', 'Lot size must be > 0');
+      }
+      
+      const exitStr = $('#f_exit', modal).value.trim();
+      let exit = '';
+      if (exitStr !== '') {
+        exit = Number(exitStr);
+        if (isNaN(exit) || exit <= 0) showErr('f_exit', 'Invalid exit price');
+        else if (ok) {
+          const dist = Math.abs(exit - entry);
+          const riskDist = Math.abs(entry - sl);
+          const pctDist = (dist / entry) * 100;
+          if (pctDist > 2 || (riskDist > 0 && dist > riskDist * 10)) {
+            if (!confirm(`Exit ${exit} is ${pctDist.toFixed(0)}% away from entry ${entry}. Are you sure?`)) return;
+          }
+        }
+      }
+      
+      if (!ok) {
+        errEl.textContent = 'Please fix the highlighted errors above.';
+        errEl.style.display = 'block';
+        if (firstErrId) {
+          const field = $('#' + firstErrId, modal);
+          if (field) {
+            field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            field.focus();
+          }
+        }
+        return;
+      }
+      
+      t.pair = pair;
+      t.entry = entry;
+      t.stopLoss = sl;
+      t.takeProfit = tp;
+      t.lotSize = lot;
+      t.exit = exit;
+      t.dateTime = $('#f_dt', modal).value;
+      t.notes = $('#f_notes', modal).value;
+
+      if (t.pendingScreenshot) {
+        await saveImage(t.id, t.pendingScreenshot);
+        delete t.pendingScreenshot;
+      }
+
+      if (existing){
+        const idx = state.trades.findIndex(x => x.id === existing.id);
+        if (idx >= 0) state.trades[idx] = t;
+      } else {
+        state.trades.push(t);
+      }
+      save();
+      closeModal();
+      render();
+      showToast(existing ? 'Trade updated' : 'Trade added');
+      
+    } catch (e) {
+      console.error(e);
+      const errEl = $('#globalError', modal);
+      if (errEl) {
+        errEl.textContent = 'Could not save: ' + e.message;
+        errEl.style.display = 'block';
+      } else {
+        alert('Could not save: ' + e.message);
+      }
+    }
+  });
+
+  $$('[data-close-form]', modal).forEach(b => b.addEventListener('click', closeModal));
+}
+
+function compressImage(file, maxEdge = 1200, quality = 0.72){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width: w, height: h } = img;
+      const scale = Math.min(1, maxEdge / Math.max(w, h));
+      w = Math.round(w * scale);
+      h = Math.round(h * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+    img.src = url;
+  });
+}
+
+function createThumb(base64) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const scale = 80 / Math.max(img.width, img.height);
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.6));
+    };
+    img.src = base64;
+  });
+}
+
+/* ============================================================
+   TRADE DETAIL
+   ============================================================ */
+async function openTradeDetail(id){
+  const t = state.trades.find(x => x.id === id);
+  if (!t) return;
+  const c = state.calcMap[t.id] || calcTrade(t, 0);
+  const d = new Date(t.dateTime);
+
+  const rows = [
+    ['Date', fmtDateFull(d) + ' · ' + fmtTime(d)],
+    ['Direction', c.direction || '—'],
+    ['Entry', fmtPrice(t.entry, t.pair)],
+    ['Stop-Loss', fmtPrice(t.stopLoss, t.pair)],
+    ['Take-Profit', fmtPrice(t.takeProfit, t.pair)],
+    ['Lot size', t.lotSize || '—'],
+    ['Risk (pips)', c.riskPips == null ? '—' : c.riskPips],
+    ['Reward (pips)', c.rewardPips == null ? '—' : c.rewardPips],
+    ['R:R Ratio', c.rr ? '1:' + c.rr.toFixed(1) : '—'],
+  ];
+
+  if (c.result === 'NO_STOP') {
+    rows.push(['Status', '<span style="color:var(--gold)">No stop loss</span>']);
+  } else if (c.isOpen) {
+    rows.push(['Status', 'OPEN']);
+  } else {
+    rows.push(['Exit', fmtPrice(t.exit, t.pair)]);
+    rows.push(['Pips', sgn(c.pips, 1)]);
+    rows.push(['Result', c.result]);
+    rows.push(['R-multiple', rTxt(c.r)]);
+    if (c.moneyResult != null) {
+      rows.push(['Money Result', moneyTxt(c.moneyResult)]);
+    }
+    rows.push(['Result %', pctTxt(c.pct)]);
+  }
+
+  const notesEdited = t.notesEditedAt ? ` <span class="small muted">(edited: ${fmtDateFull(new Date(t.notesEditedAt))})</span>` : '';
+
+  const body = `
+    <div class="card" style="margin:0 0 10px">
+      ${rows.map(([k,v]) => `
+        <div class="preview-row"><span class="muted">${esc(k)}</span><b>${v}</b></div>
+      `).join('')}
+      
+      <div class="preview-row" style="margin-top:8px; border-top:1px solid var(--border); padding-top:8px;">
+        <span class="muted">Risk % for this trade</span>
+        <input type="text" inputmode="decimal" id="editRiskPct" style="width:80px; padding:4px 8px; font-size:14px;" value="${c.riskPct}" placeholder="1">
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Notes${notesEdited}</h3>
+      <textarea id="detailNotes" rows="4" style="margin-bottom:8px;">${esc(t.notes || '')}</textarea>
+      <button class="btn primary full tiny" id="saveNotesBtn">Save Notes</button>
+    </div>
+
+    <div id="detailImageContainer"></div>
+  `;
+  
+  let footer = `
+    <button class="btn danger" id="delBtn">Delete</button>
+    <button class="btn" id="editBtn" style="flex:1">Edit Details</button>
+  `;
+  
+  if (c.result === 'NO_STOP') {
+    footer = `
+      <button class="btn danger" id="delBtn">Delete</button>
+      <button class="btn primary" id="editBtn" style="flex:1">Add stop loss</button>
+    `;
+  } else if (c.isOpen) {
+    footer += `<button class="btn primary" id="closeBtn" style="flex:1">Close Trade</button>`;
+  } else {
+    footer += `<button class="btn" id="reopenBtn" style="flex:1; margin-left:4px;">Reopen</button>`;
+  }
+
+  const modal = openModal(`${t.pair} ${c.direction || ''}`, body, footer);
+
+  getImage(t.id).then(fullImg => {
+    if (fullImg) {
+      const container = $('#detailImageContainer', modal);
+      if (container) {
+        container.innerHTML = `<div class="card"><h3>Chart</h3><img src="${fullImg}" style="width:100%;border-radius:10px" data-zoom="1"></div>`;
+        $$('[data-zoom]', modal).forEach(img => img.addEventListener('click', () => openViewer(img.src)));
+      }
+    }
+  });
+
+  $('#editBtn', modal).addEventListener('click', () => { closeModal(); openTradeForm(t.id); });
+  $('#delBtn', modal).addEventListener('click', () => deleteTrade(t.id));
+  
+  $('#saveNotesBtn', modal).addEventListener('click', () => {
+    t.notes = $('#detailNotes', modal).value;
+    t.notesEditedAt = new Date().toISOString();
+    save();
+    showToast('Notes saved');
+    closeModal();
+    openTradeDetail(t.id);
+  });
+
+  $('#editRiskPct', modal).addEventListener('change', (e) => {
+    const newRisk = Number(e.target.value.replace(',', '.'));
+    t.riskPct = (isNaN(newRisk) || newRisk === DEFAULT_RISK_PCT) ? '' : newRisk;
+    save(); render();
+    closeModal();
+    openTradeDetail(t.id);
+  });
+
+  if (c.isOpen) {
+    $('#closeBtn', modal).addEventListener('click', () => {
+      openCloseTradeModal(t);
+    });
+  } else if (c.result !== 'NO_STOP') {
+    $('#reopenBtn', modal).addEventListener('click', () => {
+      if (confirm('Reopen this trade?')) {
+        t.exit = '';
+        save();
+        closeModal();
+        render();
+      }
+    });
+  }
+}
+
+function openCloseTradeModal(t) {
+  closeModal();
+  const hasTp = t.takeProfit && Number(t.takeProfit) > 0;
+  
+  let html = `<p class="muted" style="margin-bottom:16px;">How did this trade end?</p>
+    <div style="display:flex; flex-direction:column; gap:10px;">`;
+    
+  if (hasTp) {
+    html += `
+      <button class="btn" data-close-type="tp" style="text-align:left; padding:16px;">
+        <b>Hit take profit</b><br><span class="small muted">Close at ${fmtPrice(t.takeProfit, t.pair)}</span>
+      </button>`;
+  }
+  
+  html += `
+      <button class="btn" data-close-type="sl" style="text-align:left; padding:16px;">
+        <b>Hit stop loss</b><br><span class="small muted">Close at ${fmtPrice(t.stopLoss, t.pair)}</span>
+      </button>
+      <button class="btn" data-close-type="manual" style="text-align:left; padding:16px;">
+        <b>Closed manually</b><br><span class="small muted">I will type the exit price</span>
+      </button>
+    </div>`;
+  
+  const modal = openModal('Close Trade', html, '');
+  
+  $$('[data-close-type]', modal).forEach(btn => {
+    btn.addEventListener('click', () => {
+      const type = btn.dataset.closeType;
+      if (type === 'tp') {
+        t.exit = t.takeProfit;
+        save(); closeModal(); render();
+      } else if (type === 'sl') {
+        t.exit = t.stopLoss;
+        save(); closeModal(); render();
+      } else if (type === 'manual') {
+        openManualCloseModal(t);
+      }
+    });
+  });
+}
+
+function openManualCloseModal(t) {
+  closeModal();
+  const body = `
+    <div class="field">
+      <span>Exit price</span>
+      <input type="text" inputmode="decimal" id="manualExit" placeholder="e.g. 1.1050">
+      <div id="err_manual" style="color:var(--red); font-size:12px; margin-top:4px;"></div>
+    </div>
+  `;
+  const footer = `
+    <button class="btn" id="cancelManual">Cancel</button>
+    <button class="btn primary" id="saveManual">Close trade</button>
+  `;
+  const modal = openModal('Closed manually', body, footer);
+  
+  $('#cancelManual', modal).addEventListener('click', () => { closeModal(); openCloseTradeModal(t); });
+  $('#saveManual', modal).addEventListener('click', () => {
+    const val = $('#manualExit', modal).value.replace(',', '.');
+    if (val === '') return;
+    const exit = Number(val);
+    if (isNaN(exit)) { $('#err_manual', modal).textContent = 'Invalid number'; return; }
+    
+    const entry = Number(t.entry);
+    const sl = Number(t.stopLoss);
+    const dist = Math.abs(exit - entry);
+    const riskDist = Math.abs(entry - sl);
+    const pctDist = (dist / entry) * 100;
+    if (pctDist > 2 || (riskDist > 0 && dist > riskDist * 10)) {
+      if (!confirm(`Exit ${exit} is ${pctDist.toFixed(0)}% away from entry ${entry}. Are you sure?`)) return;
+    }
+    
+    t.exit = exit;
+    save();
+    closeModal();
+    render();
+  });
+}
+
+function deleteTrade(id){
+  const t = state.trades.find(x => x.id === id);
+  if (!t) return;
+  if (!confirm(`Delete ${t.pair} on ${fmtDateFull(new Date(t.dateTime))}?`)) return;
+  const idx = state.trades.findIndex(x => x.id === id);
+  state.trades.splice(idx, 1);
+  save();
+  closeModal();
+  render();
+  showToast('Trade deleted', 'Undo', () => {
+    state.trades.splice(idx, 0, t);
+    save();
+    render();
+  });
+  setTimeout(() => {
+    if (!state.trades.find(x => x.id === id)) {
+      deleteImage(id);
+    }
+  }, 5000);
+}
+
+/* ============================================================
+   FILTERS MODAL
+   ============================================================ */
+function openFilters(){
+  const f = state.filters;
+  const pairs = [...new Set(state.trades.map(t => t.pair))].sort();
+
+  const body = `
+    <label class="field"><span>Pair</span>
+      <select id="flt_pair">
+        <option value="">Any</option>
+        ${pairs.map(p => `<option value="${esc(p)}" ${f.pair===p?'selected':''}>${esc(p)}</option>`).join('')}
+      </select>
+    </label>
+    <label class="field"><span>Result</span>
+      <select id="flt_result">
+        <option value="">Any</option>
+        <option value="WIN"  ${f.result==='WIN'?'selected':''}>Win</option>
+        <option value="LOSS" ${f.result==='LOSS'?'selected':''}>Loss</option>
+        <option value="BE"   ${f.result==='BE'?'selected':''}>Breakeven</option>
+        <option value="OPEN" ${f.result==='OPEN'?'selected':''}>Open</option>
+        <option value="NO_STOP" ${f.result==='NO_STOP'?'selected':''}>No stop loss</option>
+      </select>
+    </label>
+    <div class="grid2">
+      <label class="field"><span>From</span><input type="date" id="flt_from" value="${esc(f.from)}"></label>
+      <label class="field"><span>To</span><input type="date" id="flt_to" value="${esc(f.to)}"></label>
+    </div>
+  `;
+  const footer = `
+    <button class="btn" id="clearFilters">Clear</button>
+    <button class="btn primary" id="applyFilters" style="flex:1">Apply</button>
+  `;
+  const modal = openModal('Filters', body, footer);
+
+  $('#clearFilters', modal).addEventListener('click', () => {
+    state.filters = { q:'', pair:'', result:'', from:'', to:'' };
+    closeModal(); render();
+  });
+  $('#applyFilters', modal).addEventListener('click', () => {
+    state.filters.pair = $('#flt_pair', modal).value;
+    state.filters.result = $('#flt_result', modal).value;
+    state.filters.from = $('#flt_from', modal).value;
+    state.filters.to = $('#flt_to', modal).value;
+    closeModal(); render();
+  });
+}
+
+/* ============================================================
+   MODAL / TOAST / VIEWER HELPERS
+   ============================================================ */
+let currentModal = null;
+function openModal(title, bodyHtml, footerHtml){
+  closeModal();
+  const wrap = document.createElement('div');
+  wrap.className = 'modal-backdrop';
+  wrap.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <h3>${esc(title)}</h3>
+        <button class="icon-btn" data-close-modal>✕</button>
+      </div>
+      <div class="modal-body">${bodyHtml}</div>
+      ${footerHtml ? `<div class="modal-footer">${footerHtml}</div>` : ''}
+    </div>`;
+  document.body.appendChild(wrap);
+  wrap.addEventListener('click', e => { if (e.target === wrap) closeModal(); });
+  $$('[data-close-modal]', wrap).forEach(b => b.addEventListener('click', closeModal));
+  currentModal = wrap;
+  return wrap;
+}
+function closeModal(){ if (currentModal){ currentModal.remove(); currentModal = null; } }
+
+function showToast(msg, actionText, action){
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<span>${esc(msg)}</span>${actionText?`<button>${esc(actionText)}</button>`:''}`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  const remove = () => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); };
+  if (actionText) el.querySelector('button').addEventListener('click', () => { action(); remove(); });
+  setTimeout(remove, 5000);
+}
+
+function openViewer(src){
+  const div = document.createElement('div');
+  div.id = 'viewer'; div.className = 'show';
+  div.innerHTML = `<button class="close">✕</button><img src="${src}"><div class="hint">Pinch to zoom · tap ✕ to close</div>`;
+  document.body.appendChild(div);
+  const img = div.querySelector('img');
+  div.querySelector('.close').addEventListener('click', () => div.remove());
+  div.addEventListener('click', e => { if (e.target === div) div.remove(); });
+  attachPinch(img);
+}
+
+function attachPinch(img){
+  let scale = 1, tx = 0, ty = 0;
+  const pointers = new Map();
+  let lastDist = 0;
+  const apply = () => { img.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`; };
+  img.addEventListener('pointerdown', e => { img.setPointerCapture(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pointers.size === 2){ const [a,b] = [...pointers.values()]; lastDist = Math.hypot(a.x-b.x, a.y-b.y); } });
+  img.addEventListener('pointermove', e => { if (!pointers.has(e.pointerId)) return; const prev = pointers.get(e.pointerId); pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pointers.size === 1 && scale > 1){ tx += e.clientX - prev.x; ty += e.clientY - prev.y; apply(); } else if (pointers.size === 2){ const [a,b] = [...pointers.values()]; const dist = Math.hypot(a.x-b.x, a.y-b.y); if (lastDist){ scale = Math.max(1, Math.min(6, scale * dist / lastDist)); apply(); } lastDist = dist; } });
+  const up = e => { pointers.delete(e.pointerId); if (pointers.size < 2) lastDist = 0; if (scale === 1){ tx = 0; ty = 0; apply(); } };
+  img.addEventListener('pointerup', up);
+  img.addEventListener('pointercancel', up);
+  img.addEventListener('dblclick', () => { scale = scale > 1 ? 1 : 2; if (scale === 1){ tx = 0; ty = 0; } apply(); });
+}
+
+/* ============================================================
+   DATA EXPORT / IMPORT
+   ============================================================ */
+function download(filename, content, type){
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 800);
+}
+async function exportJSON(){
+  const trades = [];
+  for (const t of state.trades) {
+    const copy = { ...t };
+    if (t.thumb) {
+      const full = await getImage(t.id);
+      if (full) copy.screenshot = full;
+    }
+    trades.push(copy);
+  }
+  const data = { version: 8, exportedAt: new Date().toISOString(), trades, settings: state.settings };
+  download('forex-journal-backup.json', JSON.stringify(data, null, 2), 'application/json');
+  showToast('Backup file downloaded');
+}
+function exportCSV(){
+  const rows = [['Date','Pair','Direction','Entry','StopLoss','TakeProfit','Exit','LotSize','Pips','Result','R','%','MoneyResult','Notes']];
+  for (const t of state.trades){
+    const c = state.calcMap[t.id] || calcTrade(t, 0);
+    rows.push([
+      t.dateTime, t.pair, c.direction, t.entry, t.stopLoss, t.takeProfit, t.exit, t.lotSize,
+      c.pips, c.result, c.r, c.pct, c.moneyResult, (t.notes||'').replace(/\r?\n/g, ' ')
+    ]);
+  }
+  const csv = rows.map(r => r.map(v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`).join(',')).join('\n');
+  download('trades.csv', csv, 'text/csv');
+  showToast('CSV downloaded');
+}
+async function importJSON(){
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'application/json,.json';
+  inp.onchange = () => {
+    const file = inp.files && inp.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!data || !Array.isArray(data.trades)) throw new Error('bad file');
+        if (!confirm(`Import ${data.trades.length} trades? This will REPLACE your current data.`)) return;
+        
+        await clearImages();
+        
+        const newTrades = [];
+        for (const t of data.trades) {
+          const nt = { ...t };
+          if (t.screenshot) {
+            await saveImage(nt.id, t.screenshot);
+            nt.thumb = await createThumb(t.screenshot);
+            delete nt.screenshot;
+          }
+          newTrades.push(nt);
+        }
+        
+        state.trades = newTrades;
+        state.settings = Object.assign(defaultSettings(), data.settings || {});
+        save(); render(); showToast('Data imported');
+      } catch(e){ alert('Could not read that backup file.'); }
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
+}
+
+/* ============================================================
+   EVENT WIRING
+   ============================================================ */
+function onViewClick(e){
+  const btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  const a = btn.dataset.action;
+
+  if (a === 'add-trade')      { openTradeForm(); return; }
+  if (a === 'open-trade')     { openTradeDetail(btn.dataset.id); return; }
+  if (a === 'edit-trade')     { openTradeForm(btn.dataset.id); return; }
+  if (a === 'delete-trade')   { deleteTrade(btn.dataset.id); return; }
+  if (a === 'toggle-week')    {
+    const wk = btn.dataset.week;
+    const open = state.tradesExpanded[wk] !== false;
+    state.tradesExpanded[wk] = !open;
+    render(); return;
+  }
+  if (a === 'toggle-deeper')  { state.deeperAnalysisOpen = !state.deeperAnalysisOpen; render(); return; }
+  if (a === 'dash-prev')      { state.dashRef = shiftPeriod(state.dashRef, state.dashPeriod, -1); render(); return; }
+  if (a === 'dash-next')      { state.dashRef = shiftPeriod(state.dashRef, state.dashPeriod,  1); render(); return; }
+  if (a === 'set-period')     { state.dashPeriod = btn.dataset.period; render(); return; }
+  if (a === 'equity-mode')    { state.equityMode = btn.dataset.mode; render(); return; }
+  if (a === 'open-filters')   { openFilters(); return; }
+  if (a === 'cal-prev')       { state.calRef = addMonths(state.calRef, -1); state.selectedDay = null; render(); return; }
+  if (a === 'cal-next')       { state.calRef = addMonths(state.calRef,  1); state.selectedDay = null; render(); return; }
+  if (a === 'cal-day')        { state.selectedDay = state.selectedDay === btn.dataset.day ? null : btn.dataset.day; render(); return; }
+  if (a === 'export-json')    { exportJSON(); return; }
+  if (a === 'export-csv')     { exportCSV(); return; }
+  if (a === 'import-json')    { importJSON(); return; }
+  if (a === 'toggle-theme')   { state.settings.theme = state.settings.theme === 'dark' ? 'light' : 'dark'; save(); render(); return; }
+  if (a === 'add-pip-row')    {
+    const name = ($('#newPairName')?.value || '').toUpperCase().trim();
+    const size = Number($('#newPairSize')?.value);
+    if (!name || !size) { alert('Enter a pair name and a pip size, e.g. GBPJPY and 0.01'); return; }
+    state.settings.pipSizes[name] = size;
+    save(); render(); return;
+  }
+  if (a === 'load-samples')   {
+    if (state.trades.length && !confirm(`Add sample trades to your current data?`)) return;
+    state.trades = state.trades.concat(buildSampleTrades());
+    save(); render(); showToast('Sample trades loaded');
+    return;
+  }
+  if (a === 'clear-all')      {
+    if (confirm('Delete ALL trades and reset settings to defaults?')){
+      state.trades = []; 
+      state.settings = defaultSettings(); 
+      save(); 
+      clearImages(); 
+      render();
+    }
+    return;
+  }
+  if (a === 'add-cf') {
+    const type = $('#cfType').value;
+    const amtStr = $('#cfAmount').value.replace(',', '.').trim();
+    const amt = Number(amtStr);
+    const date = $('#cfDate').value;
+    if (!amtStr || isNaN(amt) || !date) { alert('Enter a valid amount and date.'); return; }
+    if (!state.settings.cashFlows) state.settings.cashFlows = [];
+    state.settings.cashFlows.push({ id: 'cf_'+Date.now(), type, amount: amt, dateTime: date });
+    save(); render(); return;
+  }
+  if (a === 'del-cf') {
+    if (!confirm('Delete this cash flow?')) return;
+    state.settings.cashFlows = state.settings.cashFlows.filter(x => x.id !== btn.dataset.id);
+    save(); render(); return;
+  }
+}
+
+function onViewInput(e){
+  const inp = e.target;
+  if (inp.id === 'searchInput'){
+    state.filters.q = inp.value;
+    renderPreservingFocus();
+  }
+}
+
+function onViewChange(e){
+  const inp = e.target;
+  const key = inp.dataset.setting;
+  if (!key) return;
+
+  if (key.startsWith('pipSizes.')){
+    const pair = key.slice('pipSizes.'.length);
+    const n = Number(inp.value);
+    if (!isFinite(n) || n <= 0){ delete state.settings.pipSizes[pair]; }
+    else { state.settings.pipSizes[pair] = n; }
+    save(); render(); return;
+  }
+
+  if (key === 'theme' || key === 'currency'){ state.settings[key] = inp.value; }
+  else {
+    const n = Number(inp.value);
+    state.settings[key] = isNaN(n) ? inp.value : n;
+  }
+  save(); render();
+}
+
+function wireGlobal(){
+  document.getElementById('bottomNav').addEventListener('click', e => {
+    const b = e.target.closest('button[data-tab]');
+    if (!b) return;
+    state.tab = b.dataset.tab;
+    state.selectedDay = null;
+    render();
+    window.scrollTo(0, 0);
+  });
+
+  document.getElementById('fab').addEventListener('click', () => openTradeForm());
+
+  const view = document.getElementById('view');
+  view.addEventListener('click', onViewClick);
+  view.addEventListener('input', onViewInput);
+  view.addEventListener('change', onViewChange);
+
+  let t = null;
+  window.addEventListener('resize', () => {
+    if (state.tab !== 'dashboard') return;
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const cv = document.getElementById('equityChart');
+      if (cv) drawEquityChart(cv);
+    }, 150);
+  });
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+async function init(){
+  await initDB();
+  const loaded = load();
+  state = {
+    trades: loaded.trades,
+    settings: loaded.settings,
+    tab: 'dashboard',
+    dashPeriod: 'week',
+    dashRef: new Date(),
+    equityMode: 'pct',
+    calRef: new Date(),
+    selectedDay: null,
+    tradesExpanded: {},
+    deeperAnalysisOpen: false,
+    filters: { q:'', pair:'', result:'', from:'', to:'' },
+    calcMap: {},
+    currentBalance: 0,
+    totalPL: 0,
+  };
+  document.documentElement.dataset.theme = state.settings.theme;
+  await migrateImages();
+  wireGlobal();
+  render();
+  
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist();
+  }
+}
+
+init();
+</script>
+</body>
+</html>
