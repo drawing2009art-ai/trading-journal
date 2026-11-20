@@ -1,0 +1,2611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark light" />
+<title>Strategy Tracker</title>
+
+<!-- =========================================================
+     THEME BOOTSTRAP
+     Runs before the stylesheet is parsed so the very first
+     paint already has the correct theme (no flash).
+     ========================================================= -->
+<script>
+(function () {
+  try {
+    var pref = localStorage.getItem('strategy-tracker-theme') || 'auto';
+    var resolved = pref;
+    if (pref === 'auto') {
+      var mql = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+      resolved = (mql && mql.matches) ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', resolved);
+  } catch (e) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }
+})();
+</script>
+
+<style>
+/* =========================================================
+   THEME TOKENS
+   Two complete color sets — Dark (default) and Light.
+   The chosen theme is applied via data-theme on <html>.
+   Same --win / --loss / --neutral are reused for the
+   dashboard lines, win rate tint, dots, streaks, gap line,
+   and import messages.
+   ========================================================= */
+
+/* ---------- DARK (default) ---------- */
+:root {
+  color-scheme: dark;
+
+  --bg: #0e141b;
+  --surface: #161e29;
+  --surface-2: #1d2733;
+  --border: rgba(255, 255, 255, 0.07);
+
+  --text: #e8eef6;
+  --text-muted: #8a97a8;
+
+  --accent: #7c8cff;
+  --accent-contrast: #0b1020;
+  --accent-ring: rgba(124, 140, 255, 0.28);
+
+  --win: #34d399;
+  --loss: #f87171;
+  --neutral: #8a97a8;
+
+  --win-soft: rgba(52, 211, 153, 0.12);
+  --win-hover: rgba(52, 211, 153, 0.20);
+  --win-border: rgba(52, 211, 153, 0.28);
+  --win-flash: rgba(52, 211, 153, 0.45);
+
+  --loss-soft: rgba(248, 113, 113, 0.12);
+  --loss-hover: rgba(248, 113, 113, 0.20);
+  --loss-border: rgba(248, 113, 113, 0.28);
+  --loss-flash: rgba(248, 113, 113, 0.45);
+
+  --track: rgba(248, 113, 113, 0.20);
+
+  --radius: 16px;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.26);
+  --shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.48);
+}
+
+/* ---------- LIGHT (overrides the defaults above) ---------- */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --surface-2: #eef2f8;
+  --border: rgba(16, 24, 40, 0.09);
+
+  --text: #101828;
+  --text-muted: #667085;
+
+  --accent: #4f5bd5;
+  --accent-contrast: #ffffff;
+  --accent-ring: rgba(79, 91, 213, 0.22);
+
+  --win: #0e9f6e;
+  --loss: #d92d20;
+  --neutral: #98a2b3;
+
+  --win-soft: rgba(14, 159, 110, 0.10);
+  --win-hover: rgba(14, 159, 110, 0.18);
+  --win-border: rgba(14, 159, 110, 0.25);
+  --win-flash: rgba(14, 159, 110, 0.35);
+
+  --loss-soft: rgba(217, 45, 32, 0.08);
+  --loss-hover: rgba(217, 45, 32, 0.15);
+  --loss-border: rgba(217, 45, 32, 0.22);
+  --loss-flash: rgba(217, 45, 32, 0.30);
+
+  --track: rgba(217, 45, 32, 0.16);
+
+  --shadow: 0 6px 20px rgba(16, 24, 40, 0.07);
+  --shadow-lg: 0 18px 44px rgba(16, 24, 40, 0.16);
+}
+
+/* =========================================================
+   BASE
+   ========================================================= */
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  min-height: 100%;
+  background-color: var(--bg);
+  background-image: radial-gradient(900px 520px at 50% -12%, var(--accent-ring), transparent 70%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+               "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+  font-size: 15px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button { font-family: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.app {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px 16px 64px;
+}
+
+/* =========================================================
+   SMOOTH THEME CHANGE
+   Applied to <html> only while a theme change is running.
+   Respects reduced-motion (wrapped in no-preference).
+   ========================================================= */
+@media (prefers-reduced-motion: no-preference) {
+  html.theme-transitioning,
+  html.theme-transitioning *,
+  html.theme-transitioning *::before,
+  html.theme-transitioning *::after {
+    transition: background-color 200ms ease, color 200ms ease,
+                border-color 200ms ease, fill 200ms ease,
+                stroke 200ms ease, box-shadow 200ms ease !important;
+  }
+}
+
+/* =========================================================
+   TOP BAR (dashboard)
+   ========================================================= */
+.topbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease,
+              color 180ms ease, transform 120ms ease;
+}
+
+.icon-btn:hover { background: var(--surface-2); }
+.icon-btn:active { transform: scale(0.94); }
+
+.icon-btn.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.icon-slot { display: grid; place-items: center; }
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
+.search-wrap {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0 2px;
+  transition: max-height 200ms ease, opacity 200ms ease, margin-top 200ms ease;
+}
+
+.search-wrap.open {
+  max-height: 90px;
+  opacity: 1;
+  margin-top: 14px;
+}
+
+.search-input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.search-input::placeholder { color: var(--text-muted); }
+.search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+/* =========================================================
+   SETTINGS PANEL (dashboard gear)
+   ========================================================= */
+.settings-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 40;
+  width: min(360px, calc(100vw - 32px));
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  animation: panel-in 160ms ease-out;
+}
+
+.settings-panel.settings-panel--detail {
+  width: min(260px, calc(100vw - 32px));
+  padding: 10px;
+  overflow-y: visible;
+}
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.panel-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 16px 0;
+}
+
+.settings-panel textarea {
+  width: 100%;
+  resize: vertical;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.settings-panel textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+#exportArea { height: 120px; }
+#importArea { height: 90px; }
+
+.panel-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 18px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 130ms ease, filter 180ms ease, opacity 180ms ease;
+}
+
+.panel-btn:hover:not(:disabled) { filter: brightness(1.08); }
+.panel-btn:active:not(:disabled) { transform: scale(0.97); }
+.panel-btn:disabled { opacity: 0.4; cursor: default; }
+
+.panel-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.import-msg {
+  margin: 10px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.import-msg.is-error   { color: var(--loss); }
+.import-msg.is-success { color: var(--win); }
+
+/* =========================================================
+   THEME SEGMENTED CONTROL (Auto / Light / Dark)
+   ========================================================= */
+.theme-segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.theme-seg-btn {
+  padding: 9px 8px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.theme-seg-btn:hover:not(.is-active) { color: var(--text); }
+
+.theme-seg-btn.is-active {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* =========================================================
+   ARCHIVED LIST
+   ========================================================= */
+.archived-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.archived-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.archived-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archived-restore {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 130ms ease, filter 180ms ease;
+}
+
+.archived-restore:hover { filter: brightness(1.08); }
+.archived-restore:active { transform: scale(0.96); }
+
+.archived-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* =========================================================
+   ADD FORM
+   ========================================================= */
+.add-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.add-form input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 14px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.add-form input::placeholder { color: var(--text-muted); }
+.add-form input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.primary-btn {
+  flex: 0 0 auto;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: none;
+  border-radius: 12px;
+  padding: 13px 22px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 130ms ease, filter 180ms ease;
+}
+
+.primary-btn:hover { filter: brightness(1.08); }
+.primary-btn:active { transform: scale(0.97); }
+
+.error-msg {
+  margin: 8px 2px 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--loss);
+}
+
+.dash-message {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* =========================================================
+   STRATEGY ROWS
+   ========================================================= */
+.strategy-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 17px 16px 17px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 180ms ease, transform 120ms ease;
+}
+
+.row:hover { background: var(--surface-2); }
+.row:active { transform: scale(0.99); }
+
+.row-lines {
+  flex: 0 0 auto;
+  align-self: stretch;
+  display: flex;
+  gap: 3px;
+  min-height: 26px;
+}
+
+.row-line {
+  width: 4px;
+  border-radius: 999px;
+  background: var(--neutral);
+  transition: background-color 220ms ease;
+}
+
+.row-line.tone-win     { background: var(--win); }
+.row-line.tone-loss    { background: var(--loss); }
+.row-line.tone-neutral { background: var(--neutral); }
+
+.row-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-arrow {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+}
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+.empty-state {
+  margin-top: 16px;
+  padding: 40px 22px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+/* =========================================================
+   SCREEN 2 — STRATEGY DETAIL
+   ========================================================= */
+.detail-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.detail-gear-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 16px 0 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 180ms ease, transform 120ms ease;
+}
+
+.back-btn:hover { background: var(--surface-2); }
+.back-btn:active { transform: scale(0.98); }
+
+.detail-name {
+  margin: 14px 0 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  word-break: break-word;
+}
+
+.detail-panel-item {
+  display: block;
+  width: 100%;
+  padding: 11px 14px;
+  background: none;
+  border: none;
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.detail-panel-item:hover { background: var(--surface-2); }
+
+.detail-panel-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 6px 4px;
+}
+
+.detail-panel-item.delete-item { color: var(--text-muted); }
+.detail-panel-item.delete-item:hover {
+  color: var(--loss);
+  background: var(--loss-soft);
+}
+.detail-panel-item.delete-item.armed {
+  color: var(--loss);
+  background: var(--loss-soft);
+}
+
+.name-editor { padding: 4px 4px 8px; }
+
+.name-editor-input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.name-editor-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.name-editor-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.name-editor-btn {
+  flex: 1 1 auto;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 150ms ease, transform 120ms ease, background-color 150ms ease;
+}
+
+.name-editor-btn.save {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: none;
+}
+.name-editor-btn.save:hover { filter: brightness(1.08); }
+
+.name-editor-btn.cancel {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.name-editor-btn.cancel:hover { background: var(--surface); }
+.name-editor-btn:active { transform: scale(0.97); }
+
+.name-editor-error {
+  margin: 8px 2px 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--loss);
+}
+
+/* --- Backtest / Real segmented switch --- */
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-top: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.segment-btn {
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.segment-btn:hover:not(.is-active) { color: var(--text); }
+.segment-btn.is-active {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* --- Gap line --- */
+.gap-line {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.gap-line .above { color: var(--win); font-weight: 700; }
+.gap-line .below { color: var(--loss); font-weight: 700; }
+.gap-line .low   { color: var(--text-muted); font-weight: 500; }
+
+/* --- Win rate block --- */
+.rate-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.rate-value {
+  font-size: 46px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+  color: var(--neutral);
+  transition: color 220ms ease;
+}
+
+.rate-value.tone-win     { color: var(--win); }
+.rate-value.tone-loss    { color: var(--loss); }
+.rate-value.tone-neutral { color: var(--neutral); }
+
+.badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 9px;
+  white-space: nowrap;
+}
+
+/* --- Progress bar --- */
+.bar {
+  height: 10px;
+  margin-top: 12px;
+  border-radius: 999px;
+  background: var(--track);
+  overflow: hidden;
+  transition: background-color 200ms ease;
+}
+.bar.is-empty { background: var(--surface-2); }
+.bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: var(--win);
+  transition: width 240ms ease;
+}
+
+/* --- Dots --- */
+.dots-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+  min-height: 14px;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transition: width 200ms ease, height 200ms ease;
+}
+.dot.win  { background: var(--win); }
+.dot.loss { background: var(--loss); }
+.dot.latest { width: 14px; height: 14px; }
+
+/* --- Streak tiles --- */
+.streak-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+.streak-tile {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.streak-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.streak-value {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.streak-value.win   { color: var(--win); }
+.streak-value.loss  { color: var(--loss); }
+.streak-value.empty { color: var(--text-muted); }
+
+/* --- Stat cards --- */
+.stat-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+.stat-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 18px 18px;
+  box-shadow: var(--shadow);
+}
+.stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.stat-value {
+  margin-top: 8px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.stat-value .win  { color: var(--win); }
+.stat-value .loss { color: var(--loss); }
+.stat-value .sep  { color: var(--text); margin: 0 6px; font-weight: 600; }
+
+/* --- Win / Loss buttons --- */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.btn-win,
+.btn-loss {
+  width: 100%;
+  min-height: 64px;
+  padding: 16px 12px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 180ms ease, transform 120ms ease, border-color 180ms ease;
+}
+
+.btn-win {
+  background: var(--win-soft);
+  border-color: var(--win-border);
+  color: var(--win);
+}
+.btn-win:hover { background: var(--win-hover); }
+
+.btn-loss {
+  background: var(--loss-soft);
+  border-color: var(--loss-border);
+  color: var(--loss);
+}
+.btn-loss:hover { background: var(--loss-hover); }
+
+.btn-win:active,
+.btn-loss:active { transform: scale(0.97); }
+
+@keyframes flashWin {
+  0%   { background-color: var(--win-flash); }
+  100% { background-color: var(--win-soft); }
+}
+@keyframes flashLoss {
+  0%   { background-color: var(--loss-flash); }
+  100% { background-color: var(--loss-soft); }
+}
+.btn-win.flash-win   { animation: flashWin 280ms ease-out; }
+.btn-loss.flash-loss { animation: flashLoss 280ms ease-out; }
+
+/* --- Undo --- */
+.secondary-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 15px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 180ms ease, opacity 180ms ease, transform 120ms ease;
+}
+.secondary-btn:hover:not(:disabled) { background: var(--surface-2); }
+.secondary-btn:active:not(:disabled) { transform: scale(0.99); }
+.secondary-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* --- History --- */
+.history-section { margin-top: 22px; }
+
+.history-heading {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-empty {
+  margin: 0;
+  padding: 14px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.hist-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.hist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 150ms ease;
+}
+.hist-head:hover { background: var(--surface-2); }
+
+.hist-label {
+  font-size: 13px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+.hist-label.win  { color: var(--win); }
+.hist-label.loss { color: var(--loss); }
+
+.hist-date {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes expandIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.hist-expand {
+  padding: 0 14px 12px;
+  animation: expandIn 180ms ease-out;
+}
+
+.hist-action {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+.hist-action:hover { background: var(--surface); }
+
+.hist-date-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.hist-date-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+.hist-date-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.hist-date-row .hist-action {
+  flex: 0 0 auto;
+  width: auto;
+  margin-top: 0;
+}
+
+.hist-remove {
+  margin-top: 8px;
+  color: var(--text-muted);
+}
+.hist-remove:hover {
+  color: var(--loss);
+  border-color: var(--loss-border);
+}
+.hist-remove.armed {
+  color: var(--loss);
+  background: var(--loss-soft);
+  border-color: var(--loss-border);
+}
+
+.show-more-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.show-more-btn:hover { background: var(--surface-2); color: var(--text); }
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- =====================================================
+       SCREEN 1 — DASHBOARD
+       ===================================================== -->
+  <section id="screen-dashboard" aria-label="Dashboard">
+
+    <header class="topbar">
+      <h1 class="app-title">Strategy Tracker</h1>
+
+      <div class="topbar-actions">
+        <button type="button" class="icon-btn" id="searchToggle" aria-label="Search">
+          <span class="icon-slot" id="iconSearch">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <line x1="16.4" y1="16.4" x2="21" y2="21"></line>
+            </svg>
+          </span>
+          <span class="icon-slot" id="iconClose" hidden>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" aria-hidden="true">
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+            </svg>
+          </span>
+        </button>
+
+        <button type="button" class="icon-btn" id="settingsToggle"
+                aria-label="Settings" aria-expanded="false"
+                aria-controls="settingsPanel">
+          <span class="icon-slot">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </span>
+        </button>
+      </div>
+
+      <!-- Settings panel: Appearance / Export / Import / Archived -->
+      <div class="settings-panel" id="settingsPanel" role="dialog"
+           aria-label="Settings" hidden>
+
+        <!-- SECTION 1: Appearance -->
+        <div class="panel-title">Appearance</div>
+        <div class="theme-segmented" role="group" aria-label="Theme">
+          <button type="button" class="theme-seg-btn" data-theme-pref="auto" aria-pressed="false">Auto</button>
+          <button type="button" class="theme-seg-btn" data-theme-pref="light" aria-pressed="false">Light</button>
+          <button type="button" class="theme-seg-btn" data-theme-pref="dark" aria-pressed="false">Dark</button>
+        </div>
+
+        <div class="panel-divider"></div>
+
+        <!-- SECTION 2: Export data -->
+        <div class="panel-title">Export data</div>
+        <textarea id="exportArea" readonly spellcheck="false"
+                  aria-label="Exported JSON data"></textarea>
+        <button type="button" class="panel-btn" id="copyBtn">Copy</button>
+        <p class="panel-note">Copy your data now and then as a backup.</p>
+
+        <div class="panel-divider"></div>
+
+        <!-- SECTION 3: Import data -->
+        <div class="panel-title">Import data</div>
+        <textarea id="importArea" placeholder="Paste exported data here"
+                  spellcheck="false" aria-label="Import JSON data"></textarea>
+        <button type="button" class="panel-btn" id="importBtn" disabled>Import</button>
+        <p class="import-msg" id="importMsg" role="status" hidden></p>
+
+        <div class="panel-divider"></div>
+
+        <!-- SECTION 4: Archived strategies -->
+        <div class="panel-title">Archived strategies</div>
+        <div class="archived-list" id="archivedList"></div>
+      </div>
+    </header>
+
+    <div class="search-wrap" id="searchWrap">
+      <input type="search" id="searchInput" class="search-input"
+             placeholder="Search strategies" aria-label="Search strategies"
+             autocomplete="off" />
+    </div>
+
+    <div class="dash-message" id="dashMessage" hidden></div>
+
+    <form class="add-form" id="addForm" autocomplete="off">
+      <input type="text" id="nameInput" placeholder="Strategy name"
+             maxlength="40" aria-label="Strategy name" />
+      <button type="submit" class="primary-btn">Add</button>
+    </form>
+    <p class="error-msg" id="errorMsg" role="alert" hidden></p>
+
+    <ul class="strategy-list" id="strategyList" aria-label="Strategies"></ul>
+    <div class="empty-state" id="emptyState" hidden></div>
+
+  </section>
+
+  <!-- =====================================================
+       SCREEN 2 — STRATEGY DETAIL
+       ===================================================== -->
+  <section id="screen-detail" aria-label="Strategy detail" hidden>
+
+    <div class="detail-topbar">
+      <button type="button" class="back-btn" id="backBtn" aria-label="Back">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
+             stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="15 6 9 12 15 18"></polyline>
+        </svg>
+        Back
+      </button>
+
+      <div class="detail-gear-wrap">
+        <button type="button" class="icon-btn" id="detailSettingsToggle"
+                aria-label="Strategy settings" aria-expanded="false"
+                aria-controls="detailSettingsPanel">
+          <span class="icon-slot">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+                 stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </span>
+        </button>
+
+        <div class="settings-panel settings-panel--detail"
+             id="detailSettingsPanel" role="dialog"
+             aria-label="Strategy settings" hidden>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="detail-name" id="detailName"></h2>
+
+    <div class="segmented" role="group" aria-label="Record type">
+      <button type="button" class="segment-btn is-active"
+              id="segBacktest" aria-pressed="true">Backtest</button>
+      <button type="button" class="segment-btn"
+              id="segReal" aria-pressed="false">Real</button>
+    </div>
+
+    <div class="gap-line" id="gapLine" hidden></div>
+
+    <div class="rate-row">
+      <span class="rate-value tone-neutral" id="detailRate">0%</span>
+      <span class="badge" id="lowSampleBadge" hidden>Low sample</span>
+    </div>
+    <div class="bar is-empty" id="detailBarTrack">
+      <div class="bar-fill" id="detailBarFill"></div>
+    </div>
+
+    <div class="dots-row" id="dotsRow" hidden></div>
+
+    <div class="streak-row">
+      <div class="streak-tile">
+        <div class="streak-label">Current streak</div>
+        <div class="streak-value empty" id="currentStreak">-</div>
+      </div>
+      <div class="streak-tile">
+        <div class="streak-label">Best streak</div>
+        <div class="streak-value empty" id="bestStreak">-</div>
+      </div>
+    </div>
+
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="stat-label">Trades</div>
+        <div class="stat-value" id="detailTrades">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Wins / Losses</div>
+        <div class="stat-value">
+          <span class="win" id="detailWins">0</span><span class="sep">/</span><span class="loss" id="detailLosses">0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn-win" id="winBtn">Win (+1)</button>
+      <button type="button" class="btn-loss" id="lossBtn">Loss (-1)</button>
+    </div>
+
+    <button type="button" class="secondary-btn" id="undoBtn">Undo last result</button>
+
+    <div class="history-section">
+      <div class="history-heading">History</div>
+      <div class="history-list" id="historyList"></div>
+      <button type="button" class="show-more-btn" id="showMoreBtn" hidden>
+        Show more
+      </button>
+    </div>
+
+  </section>
+
+</div>
+
+<script>
+/* =========================================================
+   STRATEGY TRACKER
+   Data model (v2):
+     strategies = [
+       {
+         id: "abc",
+         name: "Breakout",
+         archived: false,
+         backtest: [ { id: "r1", result: "w", date: "ISO" | null } ],
+         real:     [ ... ]
+       }
+     ]
+   Theme preference lives under its own key and is NOT
+   part of Export/Import.
+   ========================================================= */
+
+const STORAGE_KEY = 'strategy-tracker-v7';
+const THEME_KEY = 'strategy-tracker-theme';
+const EXPORT_VERSION = 2;
+
+/* ---------- State ---------- */
+let strategies = [];
+let currentId = null;
+let currentMode = 'backtest';
+
+let searchTerm = '';
+let searchOpen = false;
+let settingsOpen = false;
+let detailSettingsOpen = false;
+
+let editingNameMode = false;
+let editNameValue = '';
+let editNameError = '';
+
+let deleteArmed = false;
+let expandedResultId = null;
+let removingResultId = null;
+let historyShowCount = 20;
+
+let errorTimer = null;
+let dashMessageTimer = null;
+let deleteTimer = null;
+let removeTimer = null;
+let copyTimer = null;
+let themeTransitionTimer = null;
+
+/* ---------- DOM refs ---------- */
+const dashboardScreen = document.getElementById('screen-dashboard');
+const detailScreen    = document.getElementById('screen-detail');
+
+const searchToggle    = document.getElementById('searchToggle');
+const settingsToggle  = document.getElementById('settingsToggle');
+const iconSearch      = document.getElementById('iconSearch');
+const iconClose       = document.getElementById('iconClose');
+const settingsPanel   = document.getElementById('settingsPanel');
+const exportArea      = document.getElementById('exportArea');
+const copyBtn         = document.getElementById('copyBtn');
+const importArea      = document.getElementById('importArea');
+const importBtn       = document.getElementById('importBtn');
+const importMsg       = document.getElementById('importMsg');
+const archivedList    = document.getElementById('archivedList');
+
+const searchWrap    = document.getElementById('searchWrap');
+const searchInput   = document.getElementById('searchInput');
+const addForm       = document.getElementById('addForm');
+const nameInput     = document.getElementById('nameInput');
+const errorMsg      = document.getElementById('errorMsg');
+const strategyList  = document.getElementById('strategyList');
+const emptyState    = document.getElementById('emptyState');
+const dashMessage   = document.getElementById('dashMessage');
+
+const backBtn              = document.getElementById('backBtn');
+const detailSettingsToggle = document.getElementById('detailSettingsToggle');
+const detailSettingsPanel  = document.getElementById('detailSettingsPanel');
+const detailName           = document.getElementById('detailName');
+const segBacktest          = document.getElementById('segBacktest');
+const segReal              = document.getElementById('segReal');
+const gapLine              = document.getElementById('gapLine');
+const detailRate           = document.getElementById('detailRate');
+const lowSampleBadge       = document.getElementById('lowSampleBadge');
+const detailBarTrack       = document.getElementById('detailBarTrack');
+const detailBarFill        = document.getElementById('detailBarFill');
+const dotsRow              = document.getElementById('dotsRow');
+const currentStreak        = document.getElementById('currentStreak');
+const bestStreak           = document.getElementById('bestStreak');
+const detailTrades         = document.getElementById('detailTrades');
+const detailWins           = document.getElementById('detailWins');
+const detailLosses         = document.getElementById('detailLosses');
+const winBtn               = document.getElementById('winBtn');
+const lossBtn              = document.getElementById('lossBtn');
+const undoBtn              = document.getElementById('undoBtn');
+const historyList          = document.getElementById('historyList');
+const showMoreBtn          = document.getElementById('showMoreBtn');
+
+/* =========================================================
+   THEME HANDLING
+   - Preference: 'auto' | 'light' | 'dark' (own localStorage key)
+   - Resolved theme (what actually gets applied): 'light' | 'dark'
+   - Auto responds live to the OS prefers-color-scheme
+   ========================================================= */
+
+function getThemePref() {
+  try {
+    return localStorage.getItem(THEME_KEY) || 'auto';
+  } catch (e) {
+    return 'auto';
+  }
+}
+
+function saveThemePref(pref) {
+  try {
+    localStorage.setItem(THEME_KEY, pref);
+  } catch (e) { /* ignore */ }
+}
+
+function resolveTheme(pref) {
+  if (pref === 'light' || pref === 'dark') return pref;
+  try {
+    var mql = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
+    return (mql && mql.matches) ? 'light' : 'dark';
+  } catch (e) {
+    return 'dark';
+  }
+}
+
+function applyTheme(pref) {
+  const resolved = resolveTheme(pref);
+  document.documentElement.setAttribute('data-theme', resolved);
+}
+
+function applyThemeWithTransition(pref) {
+  const root = document.documentElement;
+  root.classList.add('theme-transitioning');
+  applyTheme(pref);
+  clearTimeout(themeTransitionTimer);
+  themeTransitionTimer = setTimeout(() => {
+    root.classList.remove('theme-transitioning');
+  }, 250);
+}
+
+function updateThemeButtons() {
+  const pref = getThemePref();
+  document.querySelectorAll('.theme-seg-btn').forEach(btn => {
+    const active = btn.dataset.themePref === pref;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', String(active));
+  });
+}
+
+// Wire the appearance segmented control once
+document.querySelectorAll('.theme-seg-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const pref = btn.dataset.themePref;
+    saveThemePref(pref);
+    applyThemeWithTransition(pref);
+    updateThemeButtons();
+    // Note: the panel stays open on purpose.
+  });
+});
+
+// Live response to OS changes when in Auto
+(function watchSystemTheme() {
+  if (!window.matchMedia) return;
+  const mql = window.matchMedia('(prefers-color-scheme: light)');
+  const onChange = () => {
+    if (getThemePref() === 'auto') {
+      applyThemeWithTransition('auto');
+    }
+  };
+  if (mql.addEventListener) mql.addEventListener('change', onChange);
+  else if (mql.addListener) mql.addListener(onChange); // legacy fallback
+})();
+
+/* =========================================================
+   STORAGE (strategies)
+   ========================================================= */
+
+function loadStrategies() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .filter(item => item && typeof item.name === 'string')
+      .map(item => ({
+        id: typeof item.id === 'string' && item.id ? item.id : uid(),
+        name: item.name.slice(0, 40),
+        archived: !!item.archived,
+        backtest: sanitizeStoredResults(item.backtest),
+        real: sanitizeStoredResults(item.real)
+      }));
+  } catch (err) {
+    console.warn('Strategy Tracker: could not read saved data.', err);
+    return [];
+  }
+}
+
+function sanitizeStoredResults(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .filter(r => r && (r.result === 'w' || r.result === 'l'))
+    .map(r => ({
+      id: typeof r.id === 'string' && r.id ? r.id : uid(),
+      result: r.result,
+      date: typeof r.date === 'string' ? r.date : null
+    }));
+}
+
+function saveStrategies() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(strategies));
+  } catch (err) {
+    console.warn('Strategy Tracker: could not save data.', err);
+  }
+}
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+/**
+ * Sort a copy of results chronologically (oldest first).
+ * Null dates go first (in insertion order); dated results follow,
+ * ties broken by insertion order (Array#sort is stable).
+ */
+function sortResults(arr) {
+  return arr.slice().sort((a, b) => {
+    if (a.date === null && b.date !== null) return -1;
+    if (a.date !== null && b.date === null) return 1;
+    if (a.date === null && b.date === null) return 0;
+    return new Date(a.date) - new Date(b.date);
+  });
+}
+
+function getStats(results) {
+  let wins = 0, losses = 0;
+  for (const r of results) {
+    if (r.result === 'w') wins++;
+    else if (r.result === 'l') losses++;
+  }
+  const total = wins + losses;
+  let tone = 'neutral';
+  if (total > 0) {
+    if (wins > losses) tone = 'win';
+    else if (wins < losses) tone = 'loss';
+  }
+  return {
+    wins, losses, total,
+    rate: total === 0 ? 0 : (wins / total) * 100,
+    tone
+  };
+}
+
+function formatRate(stats) {
+  return stats.total === 0 ? '0%' : stats.rate.toFixed(1) + '%';
+}
+
+function formatDate(iso) {
+  if (!iso) return 'No date';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return 'No date';
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const pad = n => String(n).padStart(2, '0');
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function isoToLocalInput(iso) {
+  const d = iso ? new Date(iso) : new Date();
+  if (isNaN(d.getTime())) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function localInputToIso(val) {
+  if (!val) return null;
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function vibrate(pattern) {
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      navigator.vibrate(pattern);
+    }
+  } catch (err) { /* ignore */ }
+}
+
+function isNameTaken(name, excludeId) {
+  const key = name.toLowerCase();
+  return strategies.some(s => s.id !== excludeId && s.name.toLowerCase() === key);
+}
+
+function showError(message) {
+  errorMsg.textContent = message;
+  errorMsg.hidden = false;
+  clearTimeout(errorTimer);
+  errorTimer = setTimeout(() => { errorMsg.hidden = true; }, 2500);
+}
+
+function showDashMessage(message) {
+  dashMessage.textContent = message;
+  dashMessage.hidden = false;
+  clearTimeout(dashMessageTimer);
+  dashMessageTimer = setTimeout(() => { dashMessage.hidden = true; }, 4000);
+}
+
+/* =========================================================
+   STREAKS
+   ========================================================= */
+
+function computeStreaks(results) {
+  const sorted = sortResults(results);
+
+  let best = 0, runWins = 0;
+  for (const r of sorted) {
+    if (r.result === 'w') {
+      runWins++;
+      if (runWins > best) best = runWins;
+    } else {
+      runWins = 0;
+    }
+  }
+
+  let current = 0, currentResult = null;
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    if (currentResult === null) currentResult = sorted[i].result;
+    if (sorted[i].result === currentResult) current++;
+    else break;
+  }
+
+  return { best, current, currentResult };
+}
+
+/* =========================================================
+   DASHBOARD RENDERING
+   ========================================================= */
+
+function renderDashboard() {
+  const term = searchTerm.trim().toLowerCase();
+  const active = strategies.filter(s => !s.archived);
+  const filtered = active.filter(s => s.name.toLowerCase().includes(term));
+
+  strategyList.innerHTML = '';
+  const frag = document.createDocumentFragment();
+
+  filtered.forEach(strategy => {
+    const bt = getStats(strategy.backtest);
+    const rl = getStats(strategy.real);
+
+    const li = document.createElement('li');
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'row';
+    row.dataset.id = strategy.id;
+
+    const lines = document.createElement('span');
+    lines.className = 'row-lines';
+    lines.setAttribute('aria-hidden', 'true');
+
+    const l1 = document.createElement('span');
+    l1.className = 'row-line tone-' + bt.tone;
+    const l2 = document.createElement('span');
+    l2.className = 'row-line tone-' + rl.tone;
+
+    lines.append(l1, l2);
+
+    const name = document.createElement('span');
+    name.className = 'row-name';
+    name.textContent = strategy.name;
+
+    const arrow = document.createElement('span');
+    arrow.className = 'row-arrow';
+    arrow.innerHTML =
+      '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" ' +
+      'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+      'stroke-linejoin="round" aria-hidden="true">' +
+      '<polyline points="9 6 15 12 9 18"></polyline></svg>';
+
+    row.append(lines, name, arrow);
+    li.appendChild(row);
+    frag.appendChild(li);
+  });
+
+  strategyList.appendChild(frag);
+
+  if (active.length === 0) {
+    emptyState.textContent = 'No strategies yet. Add your first one above.';
+    emptyState.hidden = false;
+    strategyList.hidden = true;
+  } else if (filtered.length === 0) {
+    emptyState.textContent = 'No strategies match your search.';
+    emptyState.hidden = false;
+    strategyList.hidden = true;
+  } else {
+    emptyState.hidden = true;
+    strategyList.hidden = false;
+  }
+}
+
+/* =========================================================
+   DETAIL RENDERING
+   ========================================================= */
+
+function renderDetail() {
+  const strategy = strategies.find(s => s.id === currentId);
+  if (!strategy) { showDashboard(); return; }
+
+  const isBt = currentMode === 'backtest';
+  segBacktest.classList.toggle('is-active', isBt);
+  segReal.classList.toggle('is-active', !isBt);
+  segBacktest.setAttribute('aria-pressed', String(isBt));
+  segReal.setAttribute('aria-pressed', String(!isBt));
+
+  detailName.textContent = strategy.name;
+
+  const stats = getStats(strategy[currentMode]);
+  detailRate.textContent = formatRate(stats);
+  detailRate.className = 'rate-value tone-' + stats.tone;
+  lowSampleBadge.hidden = stats.total >= 5;
+
+  detailBarTrack.classList.toggle('is-empty', stats.total === 0);
+  detailBarFill.style.width = stats.total === 0 ? '0%' : stats.rate + '%';
+
+  detailTrades.textContent = stats.total;
+  detailWins.textContent = stats.wins;
+  detailLosses.textContent = stats.losses;
+
+  undoBtn.disabled = strategy[currentMode].length === 0;
+
+  renderGapLine(strategy);
+  renderDots(strategy[currentMode]);
+  renderStreaks(strategy[currentMode]);
+  renderHistory(strategy);
+}
+
+function renderGapLine(strategy) {
+  const bt = getStats(strategy.backtest);
+  const rl = getStats(strategy.real);
+
+  if (bt.total === 0 || rl.total === 0) {
+    gapLine.hidden = true;
+    return;
+  }
+
+  const diff = rl.rate - bt.rate;
+  const rounded = Math.round(Math.abs(diff) * 10) / 10;
+  const lowSample = bt.total < 5 || rl.total < 5;
+  const suffix = lowSample ? ' <span class="low">(low sample)</span>' : '';
+
+  let html;
+  if (rounded === 0) {
+    html = `Real matches Backtest${suffix}`;
+  } else if (diff > 0) {
+    html = `Real is <span class="above">${rounded.toFixed(1)} points above</span> Backtest${suffix}`;
+  } else {
+    html = `Real is <span class="below">${rounded.toFixed(1)} points below</span> Backtest${suffix}`;
+  }
+
+  gapLine.innerHTML = html;
+  gapLine.hidden = false;
+}
+
+function renderDots(results) {
+  if (results.length === 0) {
+    dotsRow.hidden = true;
+    dotsRow.innerHTML = '';
+    return;
+  }
+
+  const sorted = sortResults(results);
+  const last10 = sorted.slice(-10);
+
+  dotsRow.innerHTML = last10.map((r, i) => {
+    const cls = 'dot ' + (r.result === 'w' ? 'win' : 'loss') +
+                (i === last10.length - 1 ? ' latest' : '');
+    return `<span class="${cls}" aria-hidden="true"></span>`;
+  }).join('');
+
+  dotsRow.hidden = false;
+}
+
+function renderStreaks(results) {
+  const { best, current, currentResult } = computeStreaks(results);
+
+  if (current === 0) {
+    currentStreak.textContent = '-';
+    currentStreak.className = 'streak-value empty';
+  } else {
+    const label = currentResult === 'w'
+      ? (current === 1 ? '1 win' : current + ' wins')
+      : (current === 1 ? '1 loss' : current + ' losses');
+    currentStreak.textContent = label;
+    currentStreak.className = 'streak-value ' + (currentResult === 'w' ? 'win' : 'loss');
+  }
+
+  if (best === 0) {
+    bestStreak.textContent = '-';
+    bestStreak.className = 'streak-value empty';
+  } else {
+    bestStreak.textContent = best === 1 ? '1 win' : best + ' wins';
+    bestStreak.className = 'streak-value win';
+  }
+}
+
+function renderHistory(strategy) {
+  const sorted = sortResults(strategy[currentMode]).reverse();
+
+  if (sorted.length === 0) {
+    historyList.innerHTML = '<p class="history-empty">No results yet.</p>';
+    showMoreBtn.hidden = true;
+    return;
+  }
+
+  const shown = Math.min(historyShowCount, sorted.length);
+  const visible = sorted.slice(0, shown);
+
+  historyList.innerHTML = visible.map(r => buildHistoryRow(r)).join('');
+  showMoreBtn.hidden = shown >= sorted.length;
+}
+
+function buildHistoryRow(result) {
+  const expanded = expandedResultId === result.id;
+  const label = result.result === 'w' ? 'Win' : 'Loss';
+  const labelCls = result.result === 'w' ? 'win' : 'loss';
+  const flipText = result.result === 'w' ? 'Change to Loss' : 'Change to Win';
+
+  let expandHtml = '';
+  if (expanded) {
+    const dateVal = isoToLocalInput(result.date);
+    const removeLabel = removingResultId === result.id ? 'Tap again to remove' : 'Remove';
+    const removeCls = removingResultId === result.id ? 'hist-remove armed' : 'hist-remove';
+
+    expandHtml =
+      '<div class="hist-expand">' +
+        `<button type="button" class="hist-action" data-action="flip" data-id="${result.id}">${flipText}</button>` +
+        '<div class="hist-date-row">' +
+          `<input type="datetime-local" class="hist-date-input" data-date-for="${result.id}" value="${dateVal}">` +
+          `<button type="button" class="hist-action" data-action="save-date" data-id="${result.id}">Save date</button>` +
+        '</div>' +
+        `<button type="button" class="${removeCls}" data-action="remove" data-id="${result.id}">${removeLabel}</button>` +
+      '</div>';
+  }
+
+  return (
+    `<div class="hist-row" data-result-id="${result.id}">` +
+      `<div class="hist-head" data-action="toggle" data-id="${result.id}">` +
+        `<span class="hist-label ${labelCls}">${label}</span>` +
+        `<span class="hist-date">${escapeHtml(formatDate(result.date))}</span>` +
+      '</div>' +
+      expandHtml +
+    '</div>'
+  );
+}
+
+/* =========================================================
+   NAVIGATION
+   ========================================================= */
+
+function openDetail(id) {
+  currentId = id;
+  currentMode = 'backtest';
+  expandedResultId = null;
+  removingResultId = null;
+  historyShowCount = 20;
+  closeDetailSettings();
+  closeSettings();
+  renderDetail();
+  dashboardScreen.hidden = true;
+  detailScreen.hidden = false;
+  window.scrollTo(0, 0);
+}
+
+function showDashboard() {
+  currentId = null;
+  expandedResultId = null;
+  removingResultId = null;
+  editingNameMode = false;
+  closeDetailSettings();
+  detailScreen.hidden = true;
+  dashboardScreen.hidden = false;
+  renderDashboard();
+  window.scrollTo(0, 0);
+}
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
+
+function openSearch() {
+  searchOpen = true;
+  searchWrap.classList.add('open');
+  searchToggle.classList.add('is-active');
+  searchToggle.setAttribute('aria-label', 'Close search');
+  iconSearch.hidden = true;
+  iconClose.hidden = false;
+  setTimeout(() => searchInput.focus(), 40);
+}
+
+function closeSearch() {
+  const hadFocus = document.activeElement === searchInput;
+  searchOpen = false;
+  searchWrap.classList.remove('open');
+  searchToggle.classList.remove('is-active');
+  searchToggle.setAttribute('aria-label', 'Search');
+  iconSearch.hidden = false;
+  iconClose.hidden = true;
+  searchInput.value = '';
+  searchTerm = '';
+  renderDashboard();
+  if (hadFocus) searchToggle.focus();
+}
+
+searchToggle.addEventListener('click', () => {
+  if (searchOpen) closeSearch();
+  else openSearch();
+});
+
+searchInput.addEventListener('input', () => {
+  searchTerm = searchInput.value;
+  renderDashboard();
+});
+
+/* =========================================================
+   DASHBOARD SETTINGS PANEL
+   ========================================================= */
+
+function buildExportJson() {
+  const payload = {
+    version: EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    strategies: strategies.map(strategy => {
+      const bt = getStats(strategy.backtest);
+      const rl = getStats(strategy.real);
+      return {
+        name: strategy.name,
+        archived: !!strategy.archived,
+        backtest: {
+          results: strategy.backtest.map(r => ({ result: r.result, date: r.date })),
+          wins: bt.wins, losses: bt.losses,
+          totalTrades: bt.total,
+          winRate: Number(bt.rate.toFixed(1))
+        },
+        real: {
+          results: strategy.real.map(r => ({ result: r.result, date: r.date })),
+          wins: rl.wins, losses: rl.losses,
+          totalTrades: rl.total,
+          winRate: Number(rl.rate.toFixed(1))
+        }
+      };
+    })
+  };
+  return JSON.stringify(payload, null, 2);
+}
+
+function openSettings() {
+  settingsOpen = true;
+  exportArea.value = buildExportJson();
+  copyBtn.textContent = 'Copy';
+
+  importArea.value = '';
+  importBtn.disabled = true;
+  clearImportMessage();
+
+  renderArchivedList();
+  updateThemeButtons();     // reflect current preference every time
+
+  settingsPanel.hidden = false;
+  settingsToggle.classList.add('is-active');
+  settingsToggle.setAttribute('aria-expanded', 'true');
+}
+
+function closeSettings() {
+  if (!settingsOpen) return;
+  settingsOpen = false;
+  settingsPanel.hidden = true;
+  settingsToggle.classList.remove('is-active');
+  settingsToggle.setAttribute('aria-expanded', 'false');
+
+  clearTimeout(copyTimer);
+  copyBtn.textContent = 'Copy';
+
+  importArea.value = '';
+  importBtn.disabled = true;
+  clearImportMessage();
+}
+
+settingsToggle.addEventListener('click', () => {
+  if (settingsOpen) closeSettings();
+  else openSettings();
+});
+
+copyBtn.addEventListener('click', async () => {
+  const text = exportArea.value;
+  let ok = false;
+  try {
+    await navigator.clipboard.writeText(text);
+    ok = true;
+  } catch (err) {
+    try {
+      exportArea.select();
+      document.execCommand('copy');
+      ok = true;
+    } catch (err2) { ok = false; }
+  }
+  if (!ok) return;
+  copyBtn.textContent = 'Copied';
+  clearTimeout(copyTimer);
+  copyTimer = setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+});
+
+/* ----- Import ----- */
+
+function clearImportMessage() {
+  importMsg.hidden = true;
+  importMsg.textContent = '';
+  importMsg.className = 'import-msg';
+}
+
+function setImportMessage(text, kind) {
+  importMsg.textContent = text;
+  importMsg.className = 'import-msg is-' + kind;
+  importMsg.hidden = false;
+}
+
+importArea.addEventListener('input', () => {
+  importBtn.disabled = importArea.value.trim() === '';
+});
+
+function parseResultsField(field) {
+  if (field === undefined || field === null) return [];
+  if (typeof field !== 'object' || Array.isArray(field)) return null;
+  if (!Array.isArray(field.results)) return null;
+
+  const out = [];
+  for (const item of field.results) {
+    if (typeof item === 'string') {
+      if (item === 'w' || item === 'l') out.push({ result: item, date: null });
+    } else if (item && typeof item === 'object' && !Array.isArray(item)) {
+      if (item.result !== 'w' && item.result !== 'l') continue;
+      let date = null;
+      if (typeof item.date === 'string') {
+        const d = new Date(item.date);
+        if (!isNaN(d.getTime())) date = d.toISOString();
+      }
+      out.push({ result: item.result, date });
+    }
+  }
+  return out;
+}
+
+function parseImportText(text) {
+  let parsed;
+  try { parsed = JSON.parse(text); }
+  catch (e) { return null; }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+  if (!Array.isArray(parsed.strategies)) return null;
+
+  const out = [];
+  for (const item of parsed.strategies) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
+    if (typeof item.name !== 'string') return null;
+
+    const name = item.name.trim();
+    if (!name) return null;
+
+    const backtest = parseResultsField(item.backtest);
+    if (backtest === null) return null;
+
+    const real = parseResultsField(item.real);
+    if (real === null) return null;
+
+    out.push({
+      name: name.slice(0, 40),
+      archived: !!item.archived,
+      backtest, real
+    });
+  }
+
+  return out;
+}
+
+importBtn.addEventListener('click', () => {
+  const text = importArea.value.trim();
+  if (!text) return;
+
+  const parsed = parseImportText(text);
+  if (parsed === null) {
+    setImportMessage(
+      "This doesn't look like exported Strategy Tracker data. Nothing was changed.",
+      'error'
+    );
+    return;
+  }
+
+  const existingNames = new Set(strategies.map(s => s.name.toLowerCase()));
+  let imported = 0, skipped = 0;
+
+  for (const item of parsed) {
+    const key = item.name.toLowerCase();
+    if (existingNames.has(key)) { skipped++; continue; }
+
+    strategies.push({
+      id: uid(),
+      name: item.name,
+      archived: item.archived,
+      backtest: item.backtest.map(r => ({ id: uid(), result: r.result, date: r.date })),
+      real: item.real.map(r => ({ id: uid(), result: r.result, date: r.date }))
+    });
+    existingNames.add(key);
+    imported++;
+  }
+
+  if (imported > 0) {
+    saveStrategies();
+    renderDashboard();
+    if (settingsOpen) renderArchivedList();
+  }
+
+  if (imported === 0) {
+    setImportMessage('Nothing new to import.', 'success');
+  } else {
+    let msg = `Imported ${imported} strateg${imported === 1 ? 'y' : 'ies'}.`;
+    if (skipped > 0) {
+      msg += ` Skipped ${skipped} that already exist${skipped === 1 ? 's' : ''}.`;
+    }
+    setImportMessage(msg, 'success');
+  }
+
+  importArea.value = '';
+  importBtn.disabled = true;
+});
+
+/* ----- Archived list ----- */
+
+function renderArchivedList() {
+  const archived = strategies.filter(s => s.archived);
+
+  if (archived.length === 0) {
+    archivedList.innerHTML = '<p class="archived-empty">No archived strategies.</p>';
+    return;
+  }
+
+  archivedList.innerHTML = archived.map(s => `
+    <div class="archived-row">
+      <span class="archived-name">${escapeHtml(s.name)}</span>
+      <button type="button" class="archived-restore" data-restore-id="${s.id}">Restore</button>
+    </div>
+  `).join('');
+}
+
+archivedList.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-restore-id]');
+  if (!btn) return;
+  const id = btn.dataset.restoreId;
+  const strategy = strategies.find(s => s.id === id);
+  if (!strategy) return;
+  strategy.archived = false;
+  saveStrategies();
+  renderArchivedList();
+  renderDashboard();
+});
+
+/* =========================================================
+   OUTSIDE-CLICK & ESCAPE
+   ========================================================= */
+
+document.addEventListener('click', (e) => {
+  if (settingsOpen) {
+    if (!settingsPanel.contains(e.target) && !settingsToggle.contains(e.target)) {
+      closeSettings();
+    }
+  }
+  if (detailSettingsOpen) {
+    if (!detailSettingsPanel.contains(e.target) && !detailSettingsToggle.contains(e.target)) {
+      closeDetailSettings();
+    }
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+
+  if (detailSettingsOpen) {
+    closeDetailSettings();
+    detailSettingsToggle.focus();
+    return;
+  }
+  if (settingsOpen) {
+    closeSettings();
+    settingsToggle.focus();
+    return;
+  }
+  if (searchOpen) closeSearch();
+});
+
+/* =========================================================
+   DETAIL GEAR PANEL (Edit name / Archive / Delete)
+   ========================================================= */
+
+function renderDetailPanel() {
+  if (editingNameMode) {
+    const val = escapeHtml(editNameValue);
+    const err = editNameError
+      ? `<div class="name-editor-error">${escapeHtml(editNameError)}</div>`
+      : '';
+    detailSettingsPanel.innerHTML =
+      '<div class="name-editor">' +
+        `<input type="text" class="name-editor-input" id="nameEditInput" maxlength="40" value="${val}" aria-label="Strategy name">` +
+        err +
+        '<div class="name-editor-row">' +
+          '<button type="button" class="name-editor-btn save" id="nameSaveBtn">Save</button>' +
+          '<button type="button" class="name-editor-btn cancel" id="nameCancelBtn">Cancel</button>' +
+        '</div>' +
+      '</div>';
+
+    const input = document.getElementById('nameEditInput');
+    const saveBtn = document.getElementById('nameSaveBtn');
+    const cancelBtn = document.getElementById('nameCancelBtn');
+
+    input.focus();
+    input.select();
+
+    input.addEventListener('input', () => {
+      editNameValue = input.value;
+      if (editNameError) {
+        editNameError = '';
+        const errEl = detailSettingsPanel.querySelector('.name-editor-error');
+        if (errEl) errEl.remove();
+      }
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); saveNameEdit(); }
+    });
+
+    saveBtn.addEventListener('click', saveNameEdit);
+    cancelBtn.addEventListener('click', () => {
+      editingNameMode = false;
+      editNameError = '';
+      renderDetailPanel();
+    });
+  } else {
+    const deleteLabel = deleteArmed ? 'Tap again to delete' : 'Delete strategy';
+    const deleteCls = deleteArmed ? 'delete-item armed' : 'delete-item';
+    detailSettingsPanel.innerHTML =
+      '<button type="button" class="detail-panel-item" id="editNameBtn">Edit name</button>' +
+      '<button type="button" class="detail-panel-item" id="archiveBtn">Archive strategy</button>' +
+      '<div class="detail-panel-divider"></div>' +
+      `<button type="button" class="detail-panel-item ${deleteCls}" id="deleteBtn">${deleteLabel}</button>`;
+
+    document.getElementById('editNameBtn').addEventListener('click', () => {
+      const s = strategies.find(x => x.id === currentId);
+      if (!s) return;
+      editingNameMode = true;
+      editNameValue = s.name;
+      editNameError = '';
+      renderDetailPanel();
+    });
+
+    document.getElementById('archiveBtn').addEventListener('click', () => {
+      const s = strategies.find(x => x.id === currentId);
+      if (!s) return;
+      s.archived = true;
+      saveStrategies();
+      closeDetailSettings();
+      showDashboard();
+      showDashMessage('Archived. Restore it from Settings.');
+    });
+
+    document.getElementById('deleteBtn').addEventListener('click', () => {
+      if (!deleteArmed) {
+        deleteArmed = true;
+        renderDetailPanel();
+        clearTimeout(deleteTimer);
+        deleteTimer = setTimeout(() => {
+          deleteArmed = false;
+          if (detailSettingsOpen) renderDetailPanel();
+        }, 3000);
+        return;
+      }
+      const id = currentId;
+      deleteArmed = false;
+      clearTimeout(deleteTimer);
+      strategies = strategies.filter(s => s.id !== id);
+      saveStrategies();
+      closeDetailSettings();
+      showDashboard();
+    });
+  }
+}
+
+function saveNameEdit() {
+  const s = strategies.find(x => x.id === currentId);
+  if (!s) return;
+
+  const newName = editNameValue.trim();
+
+  if (!newName) {
+    editNameError = 'Name cannot be empty.';
+    renderDetailPanel();
+    return;
+  }
+
+  if (isNameTaken(newName, s.id)) {
+    editNameError = 'That name is already taken.';
+    renderDetailPanel();
+    return;
+  }
+
+  s.name = newName;
+  saveStrategies();
+  editingNameMode = false;
+  editNameError = '';
+  detailName.textContent = s.name;
+  renderDashboard();
+  renderDetailPanel();
+}
+
+function openDetailSettings() {
+  detailSettingsOpen = true;
+  detailSettingsPanel.hidden = false;
+  detailSettingsToggle.classList.add('is-active');
+  detailSettingsToggle.setAttribute('aria-expanded', 'true');
+  renderDetailPanel();
+}
+
+function closeDetailSettings() {
+  if (!detailSettingsOpen) {
+    editingNameMode = false;
+    editNameError = '';
+    deleteArmed = false;
+    clearTimeout(deleteTimer);
+    return;
+  }
+  detailSettingsOpen = false;
+  detailSettingsPanel.hidden = true;
+  detailSettingsToggle.classList.remove('is-active');
+  detailSettingsToggle.setAttribute('aria-expanded', 'false');
+  editingNameMode = false;
+  editNameError = '';
+  deleteArmed = false;
+  clearTimeout(deleteTimer);
+}
+
+detailSettingsToggle.addEventListener('click', () => {
+  if (detailSettingsOpen) closeDetailSettings();
+  else openDetailSettings();
+});
+
+/* =========================================================
+   ADD STRATEGY
+   ========================================================= */
+
+addForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  const name = nameInput.value.trim();
+  if (!name) { showError('Please enter a strategy name.'); return; }
+  if (isNameTaken(name, null)) { showError('That strategy already exists.'); return; }
+
+  strategies.push({ id: uid(), name, archived: false, backtest: [], real: [] });
+  saveStrategies();
+
+  nameInput.value = '';
+  if (searchOpen) closeSearch();
+
+  renderDashboard();
+  nameInput.focus();
+});
+
+nameInput.addEventListener('input', () => { errorMsg.hidden = true; });
+
+/* =========================================================
+   OPEN A STRATEGY / BACK
+   ========================================================= */
+
+strategyList.addEventListener('click', (e) => {
+  const row = e.target.closest('.row');
+  if (!row) return;
+  openDetail(row.dataset.id);
+});
+
+backBtn.addEventListener('click', showDashboard);
+
+/* =========================================================
+   MODE SWITCH
+   ========================================================= */
+
+segBacktest.addEventListener('click', () => {
+  if (currentMode === 'backtest') return;
+  currentMode = 'backtest';
+  expandedResultId = null;
+  removingResultId = null;
+  historyShowCount = 20;
+  renderDetail();
+});
+
+segReal.addEventListener('click', () => {
+  if (currentMode === 'real') return;
+  currentMode = 'real';
+  expandedResultId = null;
+  removingResultId = null;
+  historyShowCount = 20;
+  renderDetail();
+});
+
+/* =========================================================
+   RECORD RESULT / UNDO
+   ========================================================= */
+
+function recordResult(result) {
+  const s = strategies.find(x => x.id === currentId);
+  if (!s) return;
+  s[currentMode].push({
+    id: uid(),
+    result,
+    date: new Date().toISOString()
+  });
+  saveStrategies();
+  renderDetail();
+  renderDashboard();
+}
+
+function flash(btn, cls) {
+  btn.classList.remove('flash-win', 'flash-loss');
+  void btn.offsetWidth;
+  btn.classList.add(cls);
+  btn.addEventListener('animationend', () => btn.classList.remove(cls), { once: true });
+}
+
+winBtn.addEventListener('click', () => {
+  vibrate(30);
+  recordResult('w');
+  flash(winBtn, 'flash-win');
+});
+
+lossBtn.addEventListener('click', () => {
+  vibrate([30, 40, 30]);
+  recordResult('l');
+  flash(lossBtn, 'flash-loss');
+});
+
+undoBtn.addEventListener('click', () => {
+  const s = strategies.find(x => x.id === currentId);
+  if (!s) return;
+
+  const arr = s[currentMode];
+  if (arr.length === 0) return;
+
+  const sorted = sortResults(arr);
+  const last = sorted[sorted.length - 1];
+  const idx = arr.indexOf(last);
+  if (idx >= 0) arr.splice(idx, 1);
+
+  if (expandedResultId === last.id) expandedResultId = null;
+  if (removingResultId === last.id) removingResultId = null;
+
+  saveStrategies();
+  renderDetail();
+  renderDashboard();
+});
+
+/* =========================================================
+   HISTORY INTERACTION
+   ========================================================= */
+
+historyList.addEventListener('click', (e) => {
+  const row = e.target.closest('.hist-row');
+  if (!row) return;
+  const resultId = row.dataset.resultId;
+
+  const actionBtn = e.target.closest('[data-action]');
+  if (actionBtn) {
+    const action = actionBtn.dataset.action;
+    if (action === 'toggle') { toggleExpand(resultId); return; }
+    if (action === 'flip') { flipResult(resultId); return; }
+    if (action === 'save-date') { saveResultDate(resultId); return; }
+    if (action === 'remove') { handleRemoveTap(resultId); return; }
+  }
+
+  if (e.target.closest('.hist-expand')) return;
+
+  toggleExpand(resultId);
+});
+
+function toggleExpand(resultId) {
+  if (expandedResultId === resultId) {
+    expandedResultId = null;
+  } else {
+    expandedResultId = resultId;
+    if (removingResultId && removingResultId !== resultId) {
+      removingResultId = null;
+      clearTimeout(removeTimer);
+    }
+  }
+  renderHistory(strategies.find(s => s.id === currentId));
+}
+
+function flipResult(resultId) {
+  const s = strategies.find(x => x.id === currentId);
+  if (!s) return;
+  const r = s[currentMode].find(x => x.id === resultId);
+  if (!r) return;
+  r.result = r.result === 'w' ? 'l' : 'w';
+  saveStrategies();
+  renderDetail();
+  renderDashboard();
+}
+
+function saveResultDate(resultId) {
+  const s = strategies.find(x => x.id === currentId);
+  if (!s) return;
+  const r = s[currentMode].find(x => x.id === resultId);
+  if (!r) return;
+
+  const input = historyList.querySelector(`[data-date-for="${resultId}"]`);
+  if (!input) return;
+
+  const iso = localInputToIso(input.value);
+  if (iso === null) return;
+
+  r.date = iso;
+  saveStrategies();
+  renderDetail();
+  renderDashboard();
+}
+
+function handleRemoveTap(resultId) {
+  if (removingResultId !== resultId) {
+    removingResultId = resultId;
+    clearTimeout(removeTimer);
+    removeTimer = setTimeout(() => {
+      removingResultId = null;
+      if (currentId) {
+        const s = strategies.find(x => x.id === currentId);
+        if (s) renderHistory(s);
+      }
+    }, 3000);
+    renderHistory(strategies.find(s => s.id === currentId));
+    return;
+  }
+
+  const s = strategies.find(x => x.id === currentId);
+  if (!s) return;
+  const arr = s[currentMode];
+  const idx = arr.findIndex(x => x.id === resultId);
+  if (idx >= 0) arr.splice(idx, 1);
+
+  if (expandedResultId === resultId) expandedResultId = null;
+  removingResultId = null;
+  clearTimeout(removeTimer);
+
+  saveStrategies();
+  renderDetail();
+  renderDashboard();
+}
+
+/* =========================================================
+   SHOW MORE
+   ========================================================= */
+
+showMoreBtn.addEventListener('click', () => {
+  historyShowCount += 20;
+  const s = strategies.find(x => x.id === currentId);
+  if (s) renderHistory(s);
+});
+
+/* =========================================================
+   INIT
+   ========================================================= */
+
+// Reflect current preference in the appearance segmented control
+updateThemeButtons();
+
+strategies = loadStrategies();
+renderDashboard();
+</script>
+</body>
+</html>
